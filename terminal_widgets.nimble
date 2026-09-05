@@ -48,6 +48,7 @@ task docs, "Generate API documentation inside build/docs":
   requireSource("src/terminal_widgets.nim")
   # Isolate documentation helper compilation from repository parent configs.
   exec "nim doc --skipParentCfg:on --project --index:on --outdir:build/docs --nimcache:build/nimcache/docs --path:src src/terminal_widgets.nim"
+  exec "nim doc --skipParentCfg:on --project --index:on --outdir:build/docs --nimcache:build/nimcache/docs-runtime --path:src src/terminal_widgets/runtime.nim"
 
 task releaseCheck, "Validate the implemented package, tests, examples, and docs":
   exec "nimble check"

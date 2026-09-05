@@ -50,6 +50,7 @@ TerminalDeck
   - [Keyed controls and composition](#keyed-controls-and-composition)
   - [Layout and focus routing](#layout-and-focus-routing)
   - [Frames, themes, and static text](#frames-themes-and-static-text)
+  - [Interactive runtime](#interactive-runtime)
   - [Input and output events](#input-and-output-events)
 - [Examples](#examples)
 - [Development and documentation](#development-and-documentation)
@@ -119,6 +120,7 @@ nim r --path:src examples/core_model.nim
 | [Keyed controls and composition](#keyed-controls-and-composition) | control constructors, `ChoiceItem`, `TabPage`, row/column/stack, `WidgetTree` | Stable application keys, snapshot collections, retained widget identity |
 | [Text editing](#text-editing) | `TextField`, `TextValidator`, `editingBoundaries` | UTF-8 cluster-safe editing, scalar limits, validation, cell viewport |
 | [Frames and themes](#frames-themes-and-static-text) | `Frame`, `CursorCell`, `WidgetTheme`, `StaticText`, `render` | Pure exact-size compositing, safe clipping, semantic styles, optional cursor |
+| [Interactive runtime](#interactive-runtime) | `runWidgets`, `RuntimeOptions`, `RuntimeEventContext`, `RunResult` | Explicit owned/borrowed TerminalScreen lifecycle and full-frame loop |
 | [Input and output events](#input-and-output-events) | `InputEvent`, `WidgetEvent`, `DispatchResult` | Normalized input and ordered typed application output |
 
 ### IDs and geometry
@@ -308,6 +310,47 @@ Run the complete example with:
 nim r --path:src examples/render_frame.nim
 ```
 
+### Interactive runtime
+
+Import `terminal_widgets/runtime` explicitly to opt into terminal I/O.
+`runWidgets(tree, options, onEvents)` opens one TerminalScreen session, verifies
+interactive ANSI/raw capabilities, obtains geometry (or uses the configured
+80×24 fallback), owns alternate-screen/cursor/autowrap modes, presents complete
+frames, and restores every acquired stage before closing. Ctrl+C returns
+`cancelled`, EOF returns `endOfInput`, and an event handler returning `stopRunning`
+returns `requestedStop`; exceptions remain exceptions after cleanup.
+
+The handler receives each dispatched input plus its ordered `WidgetEvent`
+outcome. Unhandled keys, including Escape, are delivered there instead of being
+silently discarded. Application mutations made after dispatch cause one layout
+and redraw. Timeout polls do not redraw, resize forces a full layout/frame, and
+`pollTimeoutMs` must be in `1..60000`.
+
+The borrowed overload accepts an open `TerminalSession` and its exact matching
+output `File`—a necessary caller precondition because TerminalScreen 0.1.1 has no
+public output getter. It never opens or closes the session. By default it also
+leaves screen, cursor, and autowrap ownership with the caller; opt into
+`ownBorrowedPresentation` only when the known baseline is the normal screen,
+visible cursor, and enabled autowrap. Uncatchable process termination remains
+outside the cleanup guarantee.
+
+```nim
+import terminal_widgets/runtime
+
+let result = runWidgets(tree,
+  onEvents = proc(context: RuntimeEventContext): RunAction =
+    for event in context.outcome.events:
+      if event.kind == submitted:
+        return stopRunning
+    continueRunning)
+```
+
+Compile the interactive example with:
+
+```sh
+nim c --path:src examples/interactive_form.nim
+```
+
 ## Examples
 
 The repository includes these runnable examples:
@@ -333,6 +376,8 @@ The repository includes these runnable examples:
   renders an exact-size plain frame, and reports its optional cursor metadata.
 - [`examples/companion_output.nim`](examples/companion_output.nim) places static
   graph-like string output in a frame without adding a companion dependency.
+- [`examples/interactive_form.nim`](examples/interactive_form.nim) runs a small
+  validated form through the owned TerminalScreen lifecycle in a real terminal.
 - [`examples/package_import.nim`](examples/package_import.nim) verifies that a
   facade import does not initialize a terminal session.
 

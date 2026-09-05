@@ -4,6 +4,18 @@ All notable changes to TerminalWidgets are documented in this file.
 
 ## Unreleased
 
+### Interactive runtime
+
+- Added an injected full-frame event loop with positive bounded polling, fallback
+  geometry, ordered application delivery, dirty redraws, resize, EOF, Ctrl+C,
+  and requested-stop results.
+- Added explicit owned and borrowed TerminalScreen paths with tracked
+  alternate-screen, cursor, and autowrap ownership plus complete ordered cleanup
+  and primary-error preservation.
+- Added absolute-position frame presentation without trailing newlines, a
+  compile-checked interactive form, deterministic backend tests, and generated
+  runtime API documentation.
+
 ### Rendering and themes
 
 - Added exact-size pure `Frame` rendering with zero-based optional cursor
