@@ -35,3 +35,31 @@ nim r --path:src examples/package_import.nim
 
 Widget APIs will be added in the implementation phases that follow the package
 foundation.
+
+## Development and documentation
+
+Repository builds are contained in `build/`: executables go to `build/bin`,
+compiler caches use a Nim-version and project-specific directory below
+`build/nimcache`, generated API documentation goes to `build/docs`, and test
+fixtures belong in `build/tmp`. This applies to direct commands run from the
+repository root or a nested source directory.
+
+Run the build-containment regression suite directly with:
+
+```console
+nim c -r --path:src tests/test_build_containment.nim
+```
+
+The standard package checks are:
+
+```console
+nimble check
+nimble compilePackage
+nimble test
+nimble examples
+nimble docs
+nimble releaseCheck
+```
+
+Command-line `--out` and `--nimcache` overrides take precedence over
+`config.nims`; project automation must keep any such paths below `build/`.
