@@ -160,6 +160,11 @@ changes `active`, while only Enter emits an `activated` menu event. `setItems`
 preserves enabled IDs across reorder/rename and otherwise chooses the specified
 forward-then-backward fallback. Application payloads remain in maps keyed by
 `ItemId`.
+`visibleItems` and `renderControl` inspect only the allocated slice. For
+performance verification, the `RenderMetrics.visitedItems` overload reports the
+number of rows visited; rendering five rows from a 100,000-item fixture visits
+exactly five items. Replacement remains O(n), while steady rendering is
+O(visible rows).
 
 Text field values must be valid UTF-8 single-line text without terminal control
 characters. Full cursor editing, validation callbacks, and limits belong to the

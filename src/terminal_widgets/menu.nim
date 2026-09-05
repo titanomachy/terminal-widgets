@@ -17,6 +17,18 @@ proc newMenu*(id: WidgetId; items: openArray[ChoiceItem]): Menu =
 proc items*(menu: Menu): seq[ChoiceItem] = snapshotItems(menu.itemsValue)
 proc active*(menu: Menu): Option[ItemId] = menu.modelValue.active
 proc topIndex*(menu: Menu): int = menu.modelValue.topIndex
+proc itemCount*(menu: Menu): int = menu.itemsValue.len
+
+proc visibleItems*(menu: Menu): seq[ChoiceItem] =
+  ## Copies only rows intersecting the current allocated viewport.
+  let height = if menu.allocation.isSome: menu.allocation.get.height else: 0
+  if height <= 0 or menu.itemsValue.len == 0: return
+  let stop = if height >= menu.itemsValue.len - menu.topIndex:
+               menu.itemsValue.len
+             else: menu.topIndex + height
+  result = newSeqOfCap[ChoiceItem](stop - menu.topIndex)
+  for index in menu.topIndex ..< stop:
+    result.add menu.itemsValue[index]
 
 proc viewportHeight(menu: Menu): int =
   if menu.allocation.isSome: menu.allocation.get.height else: 0

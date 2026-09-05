@@ -5,7 +5,12 @@
 
 import std/options
 import terminal_style
-import terminal_widgets/[checkbox, radio_group, selection, switch, theme, widget]
+import terminal_widgets/[checkbox, menu, radio_group, scroll_list, selection,
+  switch, theme, types, widget]
+
+type RenderMetrics* = object
+  ## Observable work counters used by rendering performance verification.
+  visitedItems*: int
 
 proc present(value: string; style: TerminalStyle; theme: WidgetTheme): string =
   applyStyle(value, style, enabled = theme.useColor)
@@ -43,3 +48,49 @@ proc renderControl*(group: RadioGroup; theme: WidgetTheme;
       elif selected: theme.selected
       else: theme.normal
     result.add present(line, style, theme)
+
+proc renderSelection(items: openArray[ChoiceItem]; active: Option[ItemId];
+                     theme: WidgetTheme; focused, enabled: bool;
+                     metrics: var RenderMetrics): seq[string] =
+  if items.len == 0:
+    return @[present("  (empty)", theme.disabled, theme)]
+  for item in items:
+    inc metrics.visitedItems
+    let isActive = active == some(item.id)
+    let line = prefix(focused and isActive, theme) & item.label
+    let style =
+      if not enabled or not item.enabled: theme.disabled
+      elif focused and isActive: theme.focused
+      elif isActive: theme.selected
+      else: theme.normal
+    result.add present(line, style, theme)
+
+proc renderControl*(list: ScrollList; theme: WidgetTheme;
+                    metrics: var RenderMetrics; focused = false;
+                    enabled = true): seq[string] =
+  ## Renders only list rows intersecting its allocated viewport.
+  if list.allocation.isNone or list.allocation.get.height == 0: return @[]
+  if list.itemCount == 0:
+    return @[present("  (empty)", theme.disabled, theme)]
+  renderSelection(list.visibleItems, list.selected, theme, focused, enabled,
+    metrics)
+
+proc renderControl*(list: ScrollList; theme: WidgetTheme;
+                    focused = false; enabled = true): seq[string] =
+  var metrics: RenderMetrics
+  renderControl(list, theme, metrics, focused, enabled)
+
+proc renderControl*(menu: Menu; theme: WidgetTheme;
+                    metrics: var RenderMetrics; focused = false;
+                    enabled = true): seq[string] =
+  ## Renders only menu rows intersecting its allocated viewport.
+  if menu.allocation.isNone or menu.allocation.get.height == 0: return @[]
+  if menu.itemCount == 0:
+    return @[present("  (empty)", theme.disabled, theme)]
+  renderSelection(menu.visibleItems, menu.active, theme, focused, enabled,
+    metrics)
+
+proc renderControl*(menu: Menu; theme: WidgetTheme;
+                    focused = false; enabled = true): seq[string] =
+  var metrics: RenderMetrics
+  renderControl(menu, theme, metrics, focused, enabled)

@@ -59,3 +59,38 @@ suite "scroll list and menu selection model":
     list.setItems([newChoiceItem(newItemId("fallback"), "Fallback")])
     check list.selected == some(newItemId("fallback"))
     check list.topIndex == 0
+
+  test "boundaries disabled data empty data and zero height are inert":
+    let list = newScrollList(newWidgetId("list"), choices())
+    let tree = newWidgetTree(list)
+    discard tree.layout(newSize(20, 2))
+    check tree.dispatch(keyInput(keyArrowUp)).events.len == 0
+    check tree.dispatch(keyInput(keyHome)).events.len == 0
+
+    let disabled = newMenu(newWidgetId("disabled"), [
+      newChoiceItem(newItemId("one"), "One", enabled = false)])
+    let disabledTree = newWidgetTree(disabled)
+    discard disabledTree.layout(newSize(20, 1))
+    check disabledTree.focused.isNone
+
+    let empty = newScrollList(newWidgetId("empty"), [])
+    let emptyTree = newWidgetTree(empty)
+    discard emptyTree.layout(newSize(20, 1))
+    check renderControl(empty, plainWidgetTheme()) == @["  (empty)"]
+    discard emptyTree.layout(newSize(20, 0))
+    check renderControl(empty, plainWidgetTheme()).len == 0
+
+  test "large-list rendering visits only allocated visible rows":
+    var items = newSeqOfCap[ChoiceItem](100_000)
+    for index in 0 ..< 100_000:
+      items.add newChoiceItem(newItemId($index), "Item " & $index)
+    let list = newScrollList(newWidgetId("large"), items)
+    let tree = newWidgetTree(list)
+    discard tree.layout(newSize(24, 5))
+    list.setSelected(some(newItemId("99999")))
+    var metrics: RenderMetrics
+    let rows = renderControl(list, plainWidgetTheme(), metrics, focused = true)
+    check rows.len == 5
+    check metrics.visitedItems == 5
+    check list.topIndex == 99_995
+    check rows[^1] == "> Item 99999"

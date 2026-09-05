@@ -17,6 +17,18 @@ proc newScrollList*(id: WidgetId; items: openArray[ChoiceItem]): ScrollList =
 proc items*(list: ScrollList): seq[ChoiceItem] = snapshotItems(list.itemsValue)
 proc selected*(list: ScrollList): Option[ItemId] = list.modelValue.active
 proc topIndex*(list: ScrollList): int = list.modelValue.topIndex
+proc itemCount*(list: ScrollList): int = list.itemsValue.len
+
+proc visibleItems*(list: ScrollList): seq[ChoiceItem] =
+  ## Copies only rows intersecting the current allocated viewport.
+  let height = if list.allocation.isSome: list.allocation.get.height else: 0
+  if height <= 0 or list.itemsValue.len == 0: return
+  let stop = if height >= list.itemsValue.len - list.topIndex:
+               list.itemsValue.len
+             else: list.topIndex + height
+  result = newSeqOfCap[ChoiceItem](stop - list.topIndex)
+  for index in list.topIndex ..< stop:
+    result.add list.itemsValue[index]
 
 proc viewportHeight(list: ScrollList): int =
   if list.allocation.isSome: list.allocation.get.height else: 0

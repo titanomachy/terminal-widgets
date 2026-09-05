@@ -10,6 +10,9 @@ All notable changes to TerminalWidgets are documented in this file.
   viewport offsets, and replacement reconciliation for lists and menus.
 - Added list selection events and distinct repeatable menu activation events.
 - Added dispatcher-level selection tests and a runnable navigation example.
+- Added visible-slice list/menu control rendering and observable render metrics;
+  a 100,000-item regression proves a five-row viewport visits only five items.
+- Expanded the example with application-owned payload lookup by `ItemId`.
 
 ### Basic controls
 
