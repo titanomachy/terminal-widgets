@@ -4,6 +4,14 @@ All notable changes to TerminalWidgets are documented in this file.
 
 ## Unreleased
 
+### Basic controls
+
+- Added Space/Enter activation and stable ASCII markers for checkboxes and
+  switches, with one Boolean event per user transition.
+- Added radio active-item navigation across enabled choices, explicit selection,
+  and transition-only selection events.
+- Added dispatcher-level tests and a runnable headless basic-controls example.
+
 ### Composition and focus
 
 - Added row, column, and stack allocation with saturating padding/gaps and

@@ -144,6 +144,12 @@ Control-specific state currently includes:
 - `selected` for `ScrollList` and `active` for `Menu` and `Tabs`
 - `value` / `setValue` for `TextField`
 
+Checkboxes and switches toggle on Space or Enter and expose stable plain markers
+(`[ ]`/`[x]` and `[off]`/`[on]`). Radio groups keep an `active` navigation item
+separate from the optional `selected` value: Up/Down and Home/End move across
+enabled choices, while Space or Enter selects the active choice. User value
+transitions return exactly one typed event; programmatic setters return none.
+
 Text field values must be valid UTF-8 single-line text without terminal control
 characters. Full cursor editing, validation callbacks, and limits belong to the
 text-editing phase.
@@ -210,6 +216,8 @@ The repository includes these runnable examples:
   retained preferences tree using only the facade.
 - [`examples/composition_focus.nim`](examples/composition_focus.nim) demonstrates
   fixed/flex layout, stored allocations, and focus traversal without terminal I/O.
+- [`examples/basic_controls.nim`](examples/basic_controls.nim) drives checkbox,
+  switch, and radio state through the public dispatcher and prints final values.
 - [`examples/package_import.nim`](examples/package_import.nim) verifies that a
   facade import does not initialize a terminal session.
 
