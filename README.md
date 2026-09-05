@@ -5,9 +5,9 @@ switches, tabs, checkboxes, menus, text fields, scrollable lists, and keyboard
 focus handling. Applications own widget references and receive typed events;
 importing `terminal_widgets` performs no terminal I/O.
 
-The public data model is available now. Layout, keyboard dispatch, rendering,
-and the opt-in interactive runtime are being added in the later phases recorded
-in [`implementation guide`](implementation guide).
+The public model, layout, keyboard dispatch, and single-line text editing are
+available now. Full-frame rendering and the opt-in interactive runtime are the
+remaining later phases recorded in [`implementation guide`](implementation guide).
 
 ## Platform support
 
@@ -116,6 +116,7 @@ nim r --path:src examples/core_model.nim
 | [IDs and geometry](#ids-and-geometry) | `WidgetId`, `ItemId`, `Rect`, `Size` | Validated stable IDs and nonnegative cell geometry |
 | [Retained widget state](#retained-widget-state) | `Widget`, common getters/setters, `revision` | Private mutable state; same-value setters do not revise |
 | [Keyed controls and composition](#keyed-controls-and-composition) | control constructors, `ChoiceItem`, `TabPage`, row/column/stack, `WidgetTree` | Stable application keys, snapshot collections, retained widget identity |
+| [Text editing](#text-editing) | `TextField`, `TextValidator`, `editingBoundaries` | UTF-8 cluster-safe editing, scalar limits, validation, cell viewport |
 | [Input and output events](#input-and-output-events) | `InputEvent`, `WidgetEvent`, `DispatchResult` | Normalized input and ordered typed application output |
 
 ### IDs and geometry
@@ -175,9 +176,38 @@ plain output uses brackets for the active page and parentheses for disabled
 pages. Inactive page widgets keep editor values, selections, and scroll offsets
 across tab changes.
 
-Text field values must be valid UTF-8 single-line text without terminal control
-characters. Full cursor editing, validation callbacks, and limits belong to the
-text-editing phase.
+### Text editing
+
+`newTextField` accepts a valid UTF-8 value and optional `placeholder`, positive
+`maxRunes` (default `4096` Unicode scalars), `readOnly` flag, and
+`TextValidator`. Values and inserted text reject malformed UTF-8, C0/C1
+controls, and DEL atomically. The byte-offset `cursorByte` always rests on a
+bounded editing cluster boundary; Left/Right, Backspace, and Delete keep
+combining marks, variation selectors, emoji modifiers, ZWJ sequences, and
+regional-indicator pairs together. `Home` and `End` clamp to the value edges.
+
+`keyText` and `keySpace` insert when Ctrl/Alt are absent. Successful edits emit
+one `textChanged` event; navigation only requests rendering. Read-only fields
+remain focusable and can navigate or submit, while editing keys are ignored.
+Tab and Backtab are left for the tree focus manager. `maxRunes` counts scalars,
+not UTF-8 bytes, graphemes, or terminal cells, and an insertion that would
+exceed it is rejected without truncation.
+
+Enter invokes the optional validator exactly once. Return `none(string)` to
+emit `submitted`; return `some(message)` to emit `validationFailed` and expose a
+sanitized `validationError` without changing focus or text. Validator exceptions
+propagate to the caller's runtime cleanup path. Validators must not mutate the
+widget tree while dispatch is in progress. A later successful edit or setter
+clears the old error. The placeholder is shown only while the value is empty and
+is never submitted.
+
+After layout, `contentWidth` reserves marker/label cells. `horizontalOffset`
+scrolls in terminal cells just enough to keep the cursor visible, leaving one
+blank caret cell at End when possible. `cursorCell` is an optional frame-local
+zero-based column and is absent when the field has no visible content cell.
+`visibleText(width)` uses TerminalStyle's cell-aware clipping and never splits a
+wide glyph. The public `editingBoundaries` helper documents the deliberately
+bounded segmentation policy used by the field.
 
 ### Keyed controls and composition
 
@@ -254,6 +284,9 @@ The repository includes these runnable examples:
 - [`examples/tabs_retained.nim`](examples/tabs_retained.nim) switches between
   three retained pages, prints a semantic header, and demonstrates preserved
   state plus tree-managed page removal and reordering.
+- [`examples/text_field_editing.nim`](examples/text_field_editing.nim) exercises
+  Unicode-safe insertion/deletion, a scalar limit, placeholder text, and
+  validator/submission events without opening a terminal.
 - [`examples/package_import.nim`](examples/package_import.nim) verifies that a
   facade import does not initialize a terminal session.
 

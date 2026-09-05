@@ -6,13 +6,14 @@
 ## accessors, keyed choices/pages, and tree construction. Layout, dispatch, and
 ## rendering are added by their corresponding implementation phases.
 
-import terminal_widgets/[checkbox, composition, dispatch, menu, radio_group,
-  render, scroll_list, selection, switch, tabs, text_field, theme, types, widget]
+import terminal_widgets/[checkbox, composition, dispatch, editor, menu,
+  radio_group, render, scroll_list, selection, switch, tabs, text_field, theme,
+  types, widget]
 
 export checkbox
 export composition except moveFocus, nodeById, parentOf, relayout
-export dispatch, menu, radio_group, render, scroll_list, selection, switch,
-  text_field, theme, types
+export dispatch, editor, menu, radio_group, render, scroll_list, selection,
+  switch, text_field, theme, types
 export tabs except applyTabPages, snapshotTabPages, tabPageChildren,
   validateTabPages
 export widget except afterAllocation, canFocus, childContentBounds, childWidgets,

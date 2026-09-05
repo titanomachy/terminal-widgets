@@ -4,6 +4,18 @@ All notable changes to TerminalWidgets are documented in this file.
 
 ## Unreleased
 
+### Text fields
+
+- Added UTF-8-safe single-line editing with byte cursors constrained to the
+  documented combining/emoji/ZWJ/regional-indicator cluster policy.
+- Added cell-aware cursor movement, cluster deletion, scalar-count `maxRunes`,
+  placeholders, read-only fields, and atomic rejection of unsafe/oversized
+  insertions.
+- Added Enter-time validators with sanitized `validationFailed` feedback,
+  explicit `submitted` events, and retained validation-error state.
+- Added horizontal viewport offsets, frame-local cursor metadata, semantic text
+  windows, Unicode boundary tests, and a runnable headless editing example.
+
 ### Tabs
 
 - Added enabled keyed-header navigation, one-row page layout, cell-aware header
