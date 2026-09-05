@@ -9,9 +9,18 @@ type WidgetTheme* = object
   focused*: TerminalStyle
   disabled*: TerminalStyle
   selected*: TerminalStyle
+  placeholder*: TerminalStyle
+  error*: TerminalStyle
+  accent*: TerminalStyle
   focusMarker*: string
+  checkboxOffMarker*: string
+  checkboxOnMarker*: string
+  switchOffMarker*: string
+  switchOnMarker*: string
   radioOffMarker*: string
   radioOnMarker*: string
+  scrollUpMarker*: string
+  scrollDownMarker*: string
 
 proc defaultWidgetTheme*(useColor = true): WidgetTheme =
   ## Returns the default theme with ASCII state markers.
@@ -24,9 +33,33 @@ proc defaultWidgetTheme*(useColor = true): WidgetTheme =
       attributes = {taDim}),
     selected: initTerminalStyle(foreground = colorGreen,
       attributes = {taBold}),
+    placeholder: initTerminalStyle(foreground = colorBrightBlack,
+      attributes = {taItalic}),
+    error: initTerminalStyle(foreground = colorRed,
+      attributes = {taBold}),
+    accent: initTerminalStyle(foreground = colorYellow),
     focusMarker: ">",
+    checkboxOffMarker: "[ ]",
+    checkboxOnMarker: "[x]",
+    switchOffMarker: "[off]",
+    switchOnMarker: "[on]",
     radioOffMarker: "( )",
-    radioOnMarker: "(*)"
+    radioOnMarker: "(*)",
+    scrollUpMarker: "^",
+    scrollDownMarker: "v"
   )
 
 proc plainWidgetTheme*(): WidgetTheme = defaultWidgetTheme(useColor = false)
+
+proc unicodeWidgetTheme*(useColor = true): WidgetTheme =
+  ## Returns the semantic default styles with optional Unicode markers.
+  result = defaultWidgetTheme(useColor)
+  result.focusMarker = "›"
+  result.checkboxOffMarker = "☐"
+  result.checkboxOnMarker = "☑"
+  result.switchOffMarker = "○"
+  result.switchOnMarker = "●"
+  result.radioOffMarker = "○"
+  result.radioOnMarker = "◉"
+  result.scrollUpMarker = "▲"
+  result.scrollDownMarker = "▼"

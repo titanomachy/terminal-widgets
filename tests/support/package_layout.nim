@@ -15,6 +15,7 @@ const expectedModules* = [
   "tabs.nim",
   "editor.nim",
   "text_field.nim",
+  "static_text.nim",
   "theme.nim",
   "render.nim",
   "runtime.nim",

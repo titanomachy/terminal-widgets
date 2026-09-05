@@ -4,6 +4,18 @@ All notable changes to TerminalWidgets are documented in this file.
 
 ## Unreleased
 
+### Rendering and themes
+
+- Added exact-size pure `Frame` rendering with zero-based optional cursor
+  metadata, ancestor clipping, wide-glyph-safe cell windows, opaque stack
+  compositing, and deterministic full-frame output.
+- Expanded semantic themes with placeholder, error, and accent styles; measured
+  ASCII/Unicode control markers; and an escape-free plain mode.
+- Added shared malformed-UTF-8/control sanitization plus plain and explicitly
+  trusted-SGR static text widgets that strip non-SGR terminal protocols.
+- Added a runnable pure frame example and regression coverage for stale layouts,
+  marker validation, style closure, unsafe content, and overlapping widgets.
+
 ### Text fields
 
 - Added UTF-8-safe single-line editing with byte cursors constrained to the

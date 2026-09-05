@@ -219,6 +219,7 @@ proc newWidgetTree*(root: Widget): WidgetTree =
 proc root*(tree: WidgetTree): Widget = tree.rootValue
 proc focused*(tree: WidgetTree): Option[WidgetId] = tree.focusValue
 proc focusOrder*(tree: WidgetTree): seq[WidgetId] = tree.focusOrderValue
+proc layoutSize*(tree: WidgetTree): Option[Size] = tree.layoutSizeValue
 
 proc nodeById*(tree: WidgetTree; id: WidgetId): Widget =
   tree.nodesValue.getOrDefault(id)

@@ -5,9 +5,9 @@ switches, tabs, checkboxes, menus, text fields, scrollable lists, and keyboard
 focus handling. Applications own widget references and receive typed events;
 importing `terminal_widgets` performs no terminal I/O.
 
-The public model, layout, keyboard dispatch, and single-line text editing are
-available now. Full-frame rendering and the opt-in interactive runtime are the
-remaining later phases recorded in [`implementation guide`](implementation guide).
+The public model, layout, keyboard dispatch, single-line text editing, and pure
+full-frame rendering are available now. The opt-in interactive runtime remains
+a later phase recorded in [`implementation guide`](implementation guide).
 
 ## Platform support
 
@@ -49,6 +49,7 @@ TerminalDeck
   - [Retained widget state](#retained-widget-state)
   - [Keyed controls and composition](#keyed-controls-and-composition)
   - [Layout and focus routing](#layout-and-focus-routing)
+  - [Frames, themes, and static text](#frames-themes-and-static-text)
   - [Input and output events](#input-and-output-events)
 - [Examples](#examples)
 - [Development and documentation](#development-and-documentation)
@@ -117,6 +118,7 @@ nim r --path:src examples/core_model.nim
 | [Retained widget state](#retained-widget-state) | `Widget`, common getters/setters, `revision` | Private mutable state; same-value setters do not revise |
 | [Keyed controls and composition](#keyed-controls-and-composition) | control constructors, `ChoiceItem`, `TabPage`, row/column/stack, `WidgetTree` | Stable application keys, snapshot collections, retained widget identity |
 | [Text editing](#text-editing) | `TextField`, `TextValidator`, `editingBoundaries` | UTF-8 cluster-safe editing, scalar limits, validation, cell viewport |
+| [Frames and themes](#frames-themes-and-static-text) | `Frame`, `CursorCell`, `WidgetTheme`, `StaticText`, `render` | Pure exact-size compositing, safe clipping, semantic styles, optional cursor |
 | [Input and output events](#input-and-output-events) | `InputEvent`, `WidgetEvent`, `DispatchResult` | Normalized input and ordered typed application output |
 
 ### IDs and geometry
@@ -151,8 +153,8 @@ separate from the optional `selected` value: Up/Down and Home/End move across
 enabled choices, while Space or Enter selects the active choice. User value
 transitions return exactly one typed event; programmatic setters return none.
 `renderControl` produces deterministic semantic lines for these controls with
-either `plainWidgetTheme()` or styled `defaultWidgetTheme()` output. The shared
-tree-level clipping and compositing renderer is completed in the rendering phase.
+either `plainWidgetTheme()` or styled `defaultWidgetTheme()` output. `render`
+composes those controls into a clipped full-tree frame.
 
 Scrollable lists and menus share stable `ChoiceItem` navigation and a `topIndex`
 viewport offset. Up/Down, Home/End, and PageUp/PageDown skip disabled items and
@@ -269,6 +271,43 @@ and `move(tree, id, newParentId)` to reparent an owned subtree atomically. These
 operations retain widget objects and values and repair focus against the latest
 layout size.
 
+### Frames, themes, and static text
+
+Call `layout(tree, size)` and then `render(tree, size, theme)` to produce a pure
+`Frame` with exactly `height` rows of display width `width`. A focused visible
+text field may set the optional zero-based `CursorCell`; frame rows never contain
+cursor movement or erase commands. Rendering rejects a mismatched or detectably
+stale layout, performs no terminal I/O, and does not mutate widget revisions.
+
+`plainWidgetTheme()` emits no ANSI escapes. `defaultWidgetTheme()` uses semantic
+normal, focused, disabled, selected, placeholder, error, and accent styles with
+ASCII markers; `unicodeWidgetTheme()` opts into Unicode markers. Custom markers
+are measured by terminal cells and must be printable, single-line, positive-width
+text. Labels, items, placeholders, and errors are treated as untrusted plain text:
+malformed UTF-8 becomes U+FFFD and terminal controls become spaces.
+
+`newStaticText` safely composes ordinary application or companion-library string
+output without adding that library as a dependency. Use the explicitly named
+`newTrustedStyledText` only for content that may retain SGR styling; the renderer
+still strips OSC, cursor, erase, and other terminal protocols. Wide glyphs are
+never cut in half, later stack children overwrite their complete rectangles, and
+all output rows close generated styles. Full-frame presentation is the baseline;
+diff rendering is intentionally deferred until measurement justifies it.
+
+```nim
+let size = newSize(24, 2)
+discard tree.layout(size)
+let frame = tree.render(size, plainWidgetTheme())
+for row in frame.rows:
+  echo row
+```
+
+Run the complete example with:
+
+```sh
+nim r --path:src examples/render_frame.nim
+```
+
 ## Examples
 
 The repository includes these runnable examples:
@@ -290,11 +329,13 @@ The repository includes these runnable examples:
 - [`examples/validated_form.nim`](examples/validated_form.nim) composes two
   validated fields, reports failed and successful submissions, and moves focus
   through the form using only the public facade.
+- [`examples/render_frame.nim`](examples/render_frame.nim) lays out a small form,
+  renders an exact-size plain frame, and reports its optional cursor metadata.
 - [`examples/package_import.nim`](examples/package_import.nim) verifies that a
   facade import does not initialize a terminal session.
 
-Examples currently exercise a side-effect-free model and semantic render data;
-they do not run a visual terminal session, so no terminal screenshot or animated
+Examples currently exercise a side-effect-free model and pure frame data; they
+do not run a visual terminal session, so no terminal screenshot or animated
 recording is applicable yet.
 
 ## Development and documentation
