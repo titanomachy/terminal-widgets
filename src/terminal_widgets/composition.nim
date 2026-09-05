@@ -279,6 +279,7 @@ proc allocate(widget: Widget; bounds: Rect) =
     clearAllocations(widget)
     return
   widget.setAllocation(some(bounds))
+  widget.afterAllocation()
   let children = widget.interactionChildren()
   if children.len == 0:
     return
@@ -348,8 +349,9 @@ proc allocate(widget: Widget; bounds: Rect) =
           (if container.kind == rowContainer: content.x + content.width
            else: content.y + content.height) - cursor)
   else:
+    let content = widget.childContentBounds(bounds)
     for child in children:
-      allocate(child, bounds)
+      allocate(child, content)
 
 proc layout*(tree: WidgetTree; size: Size): DispatchResult =
   ## Stores bounded allocations and silently chooses the initial focus.
@@ -381,6 +383,13 @@ proc layout*(tree: WidgetTree; size: Size): DispatchResult =
   if previous.isSome and tree.focusValue != previous:
     result.events.add WidgetEvent(kind: focusChanged, source: tree.rootValue.id,
       previousFocus: previous, newFocus: tree.focusValue)
+
+proc relayout*(tree: WidgetTree): DispatchResult =
+  ## Repeats layout at the last explicit viewport when one exists.
+  if tree.layoutSizeValue.isSome:
+    tree.layout(tree.layoutSizeValue.get)
+  else:
+    dispatchResult(needsRender = true)
 
 proc detach*(tree: WidgetTree; id: WidgetId): DispatchResult =
   ## Detaches a non-root subtree, releases ownership, and repairs focus.

@@ -10,8 +10,9 @@ import terminal_widgets/[checkbox, composition, dispatch, menu, radio_group,
   render, scroll_list, selection, switch, tabs, text_field, theme, types, widget]
 
 export checkbox
-export composition except moveFocus, nodeById, parentOf
+export composition except moveFocus, nodeById, parentOf, relayout
 export dispatch, menu, radio_group, render, scroll_list, selection, switch, tabs,
   text_field, theme, types
-export widget except canFocus, childWidgets, handleInput, initializeWidgetState,
+export widget except afterAllocation, canFocus, childContentBounds, childWidgets,
+  handleInput, initializeWidgetState, inputInvalidatesLayout,
   interactionChildren, isTreeOwned, setAllocation, setTreeOwned, touchWidgetState

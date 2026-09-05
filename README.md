@@ -166,6 +166,13 @@ number of rows visited; rendering five rows from a 100,000-item fixture visits
 exactly five items. Replacement remains O(n), while steady rendering is
 O(visible rows).
 
+Tabs retain keyed page roots and reserve one allocated row for their header.
+Left/Right and Home/End move among enabled headers; the active page alone enters
+layout and depth-first focus traversal. Header scrolling is measured in display
+cells and keeps the active header start visible when a single label is wider
+than the viewport. Inactive page widgets keep editor values, selections, and
+scroll offsets across tab changes.
+
 Text field values must be valid UTF-8 single-line text without terminal control
 characters. Full cursor editing, validation callbacks, and limits belong to the
 text-editing phase.
@@ -236,6 +243,8 @@ The repository includes these runnable examples:
   switch, and radio state through the public dispatcher and prints final values.
 - [`examples/selection_navigation.nim`](examples/selection_navigation.nim)
   demonstrates shared list/menu navigation and explicit menu activation.
+- [`examples/tabs_retained.nim`](examples/tabs_retained.nim) switches between
+  retained pages and demonstrates preserved editor and list state.
 - [`examples/package_import.nim`](examples/package_import.nim) verifies that a
   facade import does not initialize a terminal session.
 

@@ -4,6 +4,13 @@ All notable changes to TerminalWidgets are documented in this file.
 
 ## Unreleased
 
+### Tabs
+
+- Added enabled keyed-header navigation, one-row page layout, cell-aware header
+  offsets, immediate active-page focus integration, and selection events.
+- Preserved retained editor values, list selections, and scroll offsets across
+  tab changes, with a runnable multi-state example.
+
 ### Lists and menus
 
 - Added shared stable-key selection, disabled-item navigation, page movement,

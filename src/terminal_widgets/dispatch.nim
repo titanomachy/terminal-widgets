@@ -35,6 +35,8 @@ proc dispatch*(tree: WidgetTree; input: InputEvent): DispatchResult =
     result.appendOutcome(outcome)
     if outcome.handled:
       result.handled = true
+      if current.inputInvalidatesLayout(input, outcome):
+        result.appendOutcome(tree.relayout())
       return
     let parent = tree.parentOf(currentId)
     if parent.isNone:

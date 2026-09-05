@@ -30,6 +30,19 @@ method handleInput*(widget: Widget; input: InputEvent): DispatchResult {.base.} 
   ## Handles one routed input event; concrete controls override this hook.
   dispatchResult()
 
+method afterAllocation*(widget: Widget) {.base.} =
+  ## Internal hook for allocation-dependent retained viewport metadata.
+  discard
+
+method childContentBounds*(widget: Widget; bounds: Rect): Rect {.base.} =
+  ## Returns the default area offered to currently interactive children.
+  bounds
+
+method inputInvalidatesLayout*(widget: Widget; input: InputEvent;
+                               outcome: DispatchResult): bool {.base.} =
+  ## Whether a handled state transition changes interactive descendants.
+  false
+
 proc initializeWidgetState*(widget: Widget; id: WidgetId; label: string) =
   ## Internal cross-module initializer; applications should use constructors.
   if widget.isNil:
