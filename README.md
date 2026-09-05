@@ -331,6 +331,8 @@ The repository includes these runnable examples:
   through the form using only the public facade.
 - [`examples/render_frame.nim`](examples/render_frame.nim) lays out a small form,
   renders an exact-size plain frame, and reports its optional cursor metadata.
+- [`examples/companion_output.nim`](examples/companion_output.nim) places static
+  graph-like string output in a frame without adding a companion dependency.
 - [`examples/package_import.nim`](examples/package_import.nim) verifies that a
   facade import does not initialize a terminal session.
 

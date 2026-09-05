@@ -95,3 +95,162 @@ suite "full-frame rendering and themes":
     let row = tree.render(newSize(12, 1), defaultWidgetTheme()).rows[0]
     check row.endsWith(ansiReset)
     check displayWidth(row) == 12
+
+  test "checkbox and switch golden frames cover focus normal and disabled":
+    let checkbox = newCheckbox(newWidgetId("gold-checkbox"), "Check",
+      checked = true)
+    let switch = newSwitch(newWidgetId("gold-switch"), "Switch", on = true)
+    let root = newColumn(newWidgetId("gold-bools"),
+      [Widget(checkbox), Widget(switch)])
+    let tree = newWidgetTree(root)
+    let size = newSize(16, 2)
+    discard tree.layout(size)
+    check tree.render(size, plainWidgetTheme()).rows == @[
+      "> [x] Check     ",
+      "  [on] Switch   "]
+    discard tree.requestFocus(switch.id)
+    check tree.render(size, plainWidgetTheme()).rows == @[
+      "  [x] Check     ",
+      "> [on] Switch   "]
+    switch.setEnabled(false)
+    discard tree.layout(size)
+    check tree.render(size, plainWidgetTheme()).rows == @[
+      "> [x] Check     ",
+      "! [on] Switch   "]
+    check plainFrame(newCheckbox(newWidgetId("tiny-check"), "long"), 1, 1).rows == @[
+      ">"]
+
+  test "radio golden frames distinguish active selected disabled and empty":
+    let group = newRadioGroup(newWidgetId("gold-radio"), [
+      newChoiceItem(newItemId("one"), "One"),
+      newChoiceItem(newItemId("two"), "Two"),
+      newChoiceItem(newItemId("three"), "Three", enabled = false)
+    ], selected = some(newItemId("two")))
+    let frame = plainFrame(group, 14, 3)
+    check frame.rows == @[
+      "  ( ) One     ",
+      "> (*) Two     ",
+      "! ( ) Three   "]
+    let empty = newRadioGroup(newWidgetId("empty-radio"), [])
+    check plainFrame(empty, 8, 1).rows == @["        "]
+
+  test "list and menu golden frames cover selected disabled and empty rows":
+    let choices = [
+      newChoiceItem(newItemId("one"), "One"),
+      newChoiceItem(newItemId("disabled"), "Disabled", enabled = false),
+      newChoiceItem(newItemId("three"), "Three")]
+    let list = newScrollList(newWidgetId("gold-list"), choices)
+    check plainFrame(list, 14, 3).rows == @[
+      "> One         ",
+      "! Disabled    ",
+      "  Three       "]
+    let menu = newMenu(newWidgetId("gold-menu"), choices)
+    check plainFrame(menu, 14, 3).rows == @[
+      "> One         ",
+      "! Disabled    ",
+      "  Three       "]
+    let empty = newScrollList(newWidgetId("empty-list"), [])
+    check plainFrame(empty, 12, 1).rows == @["  (empty)   "]
+
+  test "tabs text fields and static text have complete plain snapshots":
+    let page = newCheckbox(newWidgetId("page-control"), "Inside")
+    let disabledPage = newCheckbox(newWidgetId("disabled-page-control"), "Off")
+    let tabs = newTabs(newWidgetId("gold-tabs"), [
+      newTabPage(newItemId("one-page"), "One", page),
+      newTabPage(newItemId("two-page"), "Two", disabledPage,
+        enabled = false)])
+    let tabTree = newWidgetTree(tabs)
+    let tabSize = newSize(16, 2)
+    discard tabTree.layout(tabSize)
+    check tabTree.render(tabSize, plainWidgetTheme()).rows == @[
+      "[One]|(Two)     ",
+      "  [ ] Inside    "]
+    discard tabTree.dispatch(keyInput(keyTab))
+    check tabTree.render(tabSize, plainWidgetTheme()).rows == @[
+      "[One]|(Two)     ",
+      "> [ ] Inside    "]
+
+    let validator: TextValidator = proc(value: string): Option[string] =
+      some("required")
+    let field = newTextField(newWidgetId("gold-field"), label = "Name",
+      placeholder = "type", validator = validator)
+    let fieldTree = newWidgetTree(field)
+    let fieldSize = newSize(14, 2)
+    discard fieldTree.layout(fieldSize)
+    check fieldTree.render(fieldSize, plainWidgetTheme()).rows == @[
+      "> Name: type  ",
+      "              "]
+    discard fieldTree.dispatch(keyInput(keyEnter))
+    check fieldTree.render(fieldSize, plainWidgetTheme()).rows == @[
+      "> Name: type  ",
+      "  required    "]
+    field.setEnabled(false)
+    discard fieldTree.layout(fieldSize)
+    check fieldTree.render(fieldSize, plainWidgetTheme()).rows[0] ==
+      "! Name: type  "
+
+    let text = newStaticText(newWidgetId("gold-static"), "first\n界🙂")
+    check plainFrame(text, 8, 2).rows == @["first   ", "界🙂    "]
+
+  test "large and resized nested frames remain bounded and deterministic":
+    let left = newStaticText(newWidgetId("nested-left"), "界界界")
+    let right = newStaticText(newWidgetId("nested-right"), "🙂long")
+    let row = newRow(newWidgetId("nested-row"), [Widget(left), Widget(right)])
+    row.setPadding(newPadding(1))
+    let tree = newWidgetTree(row)
+    for size in [newSize(1, 1), newSize(9, 3), newSize(120, 40)]:
+      discard tree.layout(size)
+      let before = row.revision
+      let first = tree.render(size, plainWidgetTheme())
+      let second = tree.render(size, plainWidgetTheme())
+      check first == second
+      check first.rows.len == size.height
+      for rendered in first.rows: check displayWidth(rendered) == size.width
+      if first.cursor.isSome:
+        check first.cursor.get.column in 0 ..< size.width
+        check first.cursor.get.row in 0 ..< size.height
+      check row.revision == before
+
+  test "plain cursor erase and OSC payloads never become frame controls":
+    let attacks = newStaticText(newWidgetId("attacks"),
+      "plain\e[2J erase\e[4;8H move\e]0;title\a end")
+    let frame = plainFrame(attacks, 44, 1)
+    check not frame.rows[0].contains('\e')
+    check not frame.rows[0].contains('\a')
+    check displayWidth(frame.rows[0]) == 44
+
+  test "every control remains a valid golden frame at one cell":
+    let radio = newRadioGroup(newWidgetId("tiny-radio"), [
+      newChoiceItem(newItemId("tiny-radio-item"), "界")])
+    let list = newScrollList(newWidgetId("tiny-list"), [
+      newChoiceItem(newItemId("tiny-list-item"), "界")])
+    let menu = newMenu(newWidgetId("tiny-menu"), [
+      newChoiceItem(newItemId("tiny-menu-item"), "界")])
+    let tabs = newTabs(newWidgetId("tiny-tabs"), [
+      newTabPage(newItemId("tiny-tab"), "界",
+        newCheckbox(newWidgetId("tiny-tab-child"), "child"))])
+    let widgets: seq[tuple[widget: Widget, expected: string]] = @[
+      (Widget(newCheckbox(newWidgetId("tiny-cb"), "界")), ">"),
+      (Widget(newSwitch(newWidgetId("tiny-sw"), "界")), ">"),
+      (Widget(radio), ">"),
+      (Widget(list), ">"),
+      (Widget(menu), ">"),
+      (Widget(tabs), "["),
+      (Widget(newTextField(newWidgetId("tiny-field"), value = "界")), ">"),
+      (Widget(newStaticText(newWidgetId("tiny-static"), "界")), " ")]
+    for entry in widgets:
+      check plainFrame(entry.widget, 1, 1).rows == @[entry.expected]
+
+  test "unfocused text field keeps semantic normal presentation":
+    let field = newTextField(newWidgetId("normal-field"), label = "Name",
+      value = "Ada")
+    let peer = newCheckbox(newWidgetId("normal-peer"), "Peer")
+    let root = newColumn(newWidgetId("normal-root"),
+      [Widget(field), Widget(peer)])
+    let tree = newWidgetTree(root)
+    let size = newSize(14, 2)
+    discard tree.layout(size)
+    discard tree.requestFocus(peer.id)
+    let frame = tree.render(size, plainWidgetTheme())
+    check frame.rows == @["  Name: Ada   ", "> [ ] Peer    "]
+    check frame.cursor.isNone

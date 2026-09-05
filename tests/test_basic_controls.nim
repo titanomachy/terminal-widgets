@@ -123,7 +123,7 @@ suite "checkbox switch and radio controls":
     let styled = renderControl(checkbox, defaultWidgetTheme(), focused = true)
     check styled == @["\e[1;36m> [x] Accept\e[0m"]
     let disabled = renderControl(checkbox, defaultWidgetTheme(), enabled = false)
-    check disabled == @["\e[2;90m  [x] Accept\e[0m"]
+    check disabled == @["\e[2;90m! [x] Accept\e[0m"]
 
     let group = newRadioGroup(newWidgetId("radio"), [
       newChoiceItem(newItemId("one"), "One"),

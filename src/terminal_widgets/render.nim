@@ -97,7 +97,8 @@ proc isValidMarker(value: string): bool =
 
 proc validateTheme*(theme: WidgetTheme) =
   ## Rejects unsafe or zero-cell markers before any frame is constructed.
-  for marker in [theme.focusMarker, theme.checkboxOffMarker,
+  for marker in [theme.focusMarker, theme.disabledMarker,
+      theme.checkboxOffMarker,
       theme.checkboxOnMarker, theme.switchOffMarker, theme.switchOnMarker,
       theme.radioOffMarker, theme.radioOnMarker, theme.scrollUpMarker,
       theme.scrollDownMarker]:
@@ -108,9 +109,11 @@ proc validateTheme*(theme: WidgetTheme) =
 proc present(value: string; style: TerminalStyle; theme: WidgetTheme): string =
   applyStyle(value, style, enabled = theme.useColor)
 
-proc prefix(focused: bool; theme: WidgetTheme): string =
-  (if focused: theme.focusMarker else: spaces(displayWidth(theme.focusMarker))) &
-    " "
+proc prefix(focused, enabled: bool; theme: WidgetTheme): string =
+  let marker = if not enabled: theme.disabledMarker
+               elif focused: theme.focusMarker
+               else: spaces(displayWidth(theme.focusMarker))
+  marker & " "
 
 proc safeWindow(value: string; startCell, width: int): string =
   ## Produces an exact-width cell window, blanking a glyph cut at either edge.
@@ -125,7 +128,7 @@ proc renderControl*(checkbox: Checkbox; theme: WidgetTheme;
   theme.validateTheme()
   let marker = if checkbox.checked: theme.checkboxOnMarker
                else: theme.checkboxOffMarker
-  let line = prefix(focused, theme) & marker & " " &
+  let line = prefix(focused, enabled, theme) & marker & " " &
     sanitizePlainText(checkbox.label)
   let style = if enabled: (if focused: theme.focused else: theme.normal)
               else: theme.disabled
@@ -135,7 +138,7 @@ proc renderControl*(switch: Switch; theme: WidgetTheme;
                     focused = false; enabled = true): seq[string] =
   theme.validateTheme()
   let marker = if switch.isOn: theme.switchOnMarker else: theme.switchOffMarker
-  let line = prefix(focused, theme) & marker & " " &
+  let line = prefix(focused, enabled, theme) & marker & " " &
     sanitizePlainText(switch.label)
   let style = if enabled: (if focused: theme.focused else: theme.normal)
               else: theme.disabled
@@ -148,7 +151,7 @@ proc renderControl*(group: RadioGroup; theme: WidgetTheme;
     let selected = group.selected == some(item.id)
     let active = focused and group.active == some(item.id)
     let marker = if selected: theme.radioOnMarker else: theme.radioOffMarker
-    let line = prefix(active, theme) & marker & " " &
+    let line = prefix(active, enabled and item.enabled, theme) & marker & " " &
       sanitizePlainText(item.label)
     let style =
       if not enabled or not item.enabled: theme.disabled
@@ -165,7 +168,7 @@ proc renderSelection(items: openArray[ChoiceItem]; active: Option[ItemId];
   for item in items:
     inc metrics.visitedItems
     let isActive = active == some(item.id)
-    let line = prefix(focused and isActive, theme) &
+    let line = prefix(focused and isActive, enabled and item.enabled, theme) &
       sanitizePlainText(item.label)
     let style =
       if not enabled or not item.enabled: theme.disabled
@@ -321,7 +324,7 @@ proc render*(tree: WidgetTree; size: Size; theme: WidgetTheme): Frame =
       lines = renderControl(Menu(current), theme, focused, enabled)
     elif current of TextField:
       let field = TextField(current)
-      let lead = prefix(focused, theme) &
+      let lead = prefix(focused, enabled, theme) &
         (if field.label.len > 0: sanitizePlainText(field.label) & ": " else: "")
       let available = max(0, bounds.width - displayWidth(lead))
       let cursorCells = displayWidth(field.value[0 ..< field.cursorByte])
@@ -344,7 +347,7 @@ proc render*(tree: WidgetTree; size: Size; theme: WidgetTheme): Frame =
         theme) & present(safeWindow(source, offset, available), contentStyle,
         theme)
       if field.validationError.isSome and bounds.height > 1:
-        lines.add present(prefix(false, theme) &
+        lines.add present(prefix(false, true, theme) &
           sanitizePlainText(field.validationError.get), theme.error, theme)
       if focused and available > 0:
         let column = bounds.x + displayWidth(lead) + cursorCells - offset

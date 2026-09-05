@@ -13,6 +13,7 @@ type WidgetTheme* = object
   error*: TerminalStyle
   accent*: TerminalStyle
   focusMarker*: string
+  disabledMarker*: string
   checkboxOffMarker*: string
   checkboxOnMarker*: string
   switchOffMarker*: string
@@ -39,6 +40,7 @@ proc defaultWidgetTheme*(useColor = true): WidgetTheme =
       attributes = {taBold}),
     accent: initTerminalStyle(foreground = colorYellow),
     focusMarker: ">",
+    disabledMarker: "!",
     checkboxOffMarker: "[ ]",
     checkboxOnMarker: "[x]",
     switchOffMarker: "[off]",
@@ -55,6 +57,7 @@ proc unicodeWidgetTheme*(useColor = true): WidgetTheme =
   ## Returns the semantic default styles with optional Unicode markers.
   result = defaultWidgetTheme(useColor)
   result.focusMarker = "›"
+  result.disabledMarker = "×"
   result.checkboxOffMarker = "☐"
   result.checkboxOnMarker = "☑"
   result.switchOffMarker = "○"

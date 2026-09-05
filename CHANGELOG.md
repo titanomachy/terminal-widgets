@@ -15,6 +15,9 @@ All notable changes to TerminalWidgets are documented in this file.
   trusted-SGR static text widgets that strip non-SGR terminal protocols.
 - Added a runnable pure frame example and regression coverage for stale layouts,
   marker validation, style closure, unsafe content, and overlapping widgets.
+- Added complete plain golden states for every control, one-cell and large resize
+  coverage, explicit non-color disabled markers, and a dependency-free static
+  companion-output example.
 
 ### Text fields
 
