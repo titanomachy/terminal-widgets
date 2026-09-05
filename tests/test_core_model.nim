@@ -48,10 +48,10 @@ suite "core public model":
     check checkbox.helpText.isNone
 
   test "control constructors retain values and validate selections":
-    let off = newSwitch(newWidgetId("network"), "Network")
-    check not off.on
-    off.setOn(true)
-    check off.on
+    let networkSwitch = newSwitch(newWidgetId("network"), "Network")
+    check not networkSwitch.isOn
+    networkSwitch.setOn(true)
+    check networkSwitch.isOn
 
     let choices = @[
       newChoiceItem(newItemId("normal"), "Normal"),

@@ -138,7 +138,7 @@ setters do not synthesize user events.
 Control-specific state currently includes:
 
 - `checked` / `setChecked` for `Checkbox`
-- `on` / `setOn` for `Switch`
+- `isOn` / `setOn` for `Switch`
 - `selected` / `setSelected` for `RadioGroup`
 - `selected` for `ScrollList` and `active` for `Menu` and `Tabs`
 - `value` / `setValue` for `TextField`
@@ -154,10 +154,12 @@ Duplicate item/page IDs and selections targeting missing or disabled choices are
 rejected. Collection getters return independent sequence storage, while widget
 references intentionally preserve identity.
 
-`newRow`, `newColumn`, and `newStack` create retained containers;
-`newWidgetTree` owns the controller for one root. Structural mutation, complete
-tree ownership/cycle validation, allocation, and focus handling are part of the
-next implementation categories.
+`newRow`, `newColumn`, and `newStack` create retained containers. Detached
+containers may replace their children atomically with `setChildren`; duplicate
+references, duplicate widget IDs, cycles, and already-owned widgets are rejected
+without changing the container. `newWidgetTree` validates the complete graph and
+takes exclusive ownership. Tree-managed structural mutation, allocation, and
+focus handling are part of the next implementation categories.
 
 ### Input and output events
 

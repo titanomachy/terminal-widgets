@@ -11,6 +11,11 @@ type Widget* = ref object of RootObj
   labelValue: string
   helpValue: Option[string]
   revisionValue: uint64
+  treeOwnedValue: bool
+
+method childWidgets*(widget: Widget): seq[Widget] {.base.} =
+  ## Internal traversal hook overridden by composite widgets.
+  @[]
 
 proc initializeWidgetState*(widget: Widget; id: WidgetId; label: string) =
   ## Internal cross-module initializer; applications should use constructors.
@@ -23,11 +28,18 @@ proc initializeWidgetState*(widget: Widget; id: WidgetId; label: string) =
   widget.labelValue = label
   widget.helpValue = none(string)
   widget.revisionValue = 0
+  widget.treeOwnedValue = false
 
 proc touchWidgetState*(widget: Widget) =
   ## Internal revision update used by state-changing control setters.
   if widget.revisionValue < high(uint64):
     inc widget.revisionValue
+
+proc isTreeOwned*(widget: Widget): bool = widget.treeOwnedValue
+
+proc setTreeOwned*(widget: Widget; value: bool) =
+  ## Internal ownership update performed only after whole-tree validation.
+  widget.treeOwnedValue = value
 
 proc id*(widget: Widget): WidgetId = widget.idValue
 proc visible*(widget: Widget): bool = widget.visibleValue

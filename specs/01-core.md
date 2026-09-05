@@ -65,7 +65,9 @@ proc render(tree: WidgetTree; size: Size; theme: WidgetTheme): Frame
 `ChoiceItem` contains `id`, plain `label`, and `enabled`; business payloads stay
 in application maps keyed by `ItemId`. `TabPage` contains a keyed labeled header,
 enabled flag and retained child root. Provide constructors for row/column/stack,
-choice items and pages, plus checked/on/selected/value getters and setters.
+choice items and pages, plus checked/`isOn`/selected/value getters and setters.
+The switch getter uses `isOn` rather than `on`: exporting an `on` symbol makes
+Nim 2.0's `std/unittest` fail while resolving its own pragma arguments.
 Use `Option[ItemId]` for absent selection, never an invalid sentinel index.
 
 `DispatchResult` contains `handled`, `needsRender`, and `events: seq[WidgetEvent]`.

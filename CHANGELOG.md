@@ -15,6 +15,12 @@ All notable changes to TerminalWidgets are documented in this file.
   constructors with snapshot collection getters and retained widget identity.
 - Added facade-level public-model tests and a runnable retained preferences-tree
   example.
+- Added atomic detached-container validation and exclusive tree ownership,
+  rejecting duplicate attachments, conflicting IDs, and cycles before mutation.
+- Added a facade-only black-box consumer check covering normalized input and all
+  typed event variants without import or construction side effects.
+- Named the switch getter `isOn` to avoid an `on` symbol collision with
+  `std/unittest` on supported Nim 2.0.x compilers.
 
 ### Package setup
 

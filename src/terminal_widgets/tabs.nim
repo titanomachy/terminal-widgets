@@ -61,3 +61,9 @@ proc newTabs*(id: WidgetId; pages: openArray[TabPage]): Tabs =
 
 proc pages*(tabs: Tabs): seq[TabPage] = snapshotPages(tabs.pagesValue)
 proc active*(tabs: Tabs): Option[ItemId] = tabs.activeValue
+
+method childWidgets*(tabs: Tabs): seq[Widget] =
+  ## Exposes retained page roots to internal tree validation and traversal.
+  result = newSeqOfCap[Widget](tabs.pagesValue.len)
+  for page in tabs.pagesValue:
+    result.add page.child

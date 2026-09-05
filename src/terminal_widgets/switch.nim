@@ -10,7 +10,7 @@ proc newSwitch*(id: WidgetId; label: string; on = false): Switch =
   result.initializeWidgetState(id, label)
   result.onValue = on
 
-proc on*(switch: Switch): bool = switch.onValue
+proc isOn*(switch: Switch): bool = switch.onValue
 
 proc setOn*(switch: Switch; value: bool) =
   ## Programmatic changes invalidate rendering but emit no user event.

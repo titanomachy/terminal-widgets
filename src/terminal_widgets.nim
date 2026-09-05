@@ -11,4 +11,5 @@ import terminal_widgets/[checkbox, composition, menu, radio_group, scroll_list,
 
 export checkbox, composition, menu, radio_group, scroll_list, selection, switch,
   tabs, text_field, types
-export widget except initializeWidgetState, touchWidgetState
+export widget except childWidgets, initializeWidgetState, isTreeOwned,
+  setTreeOwned, touchWidgetState
