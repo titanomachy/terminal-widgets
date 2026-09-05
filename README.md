@@ -153,6 +153,14 @@ transitions return exactly one typed event; programmatic setters return none.
 either `plainWidgetTheme()` or styled `defaultWidgetTheme()` output. The shared
 tree-level clipping and compositing renderer is completed in the rendering phase.
 
+Scrollable lists and menus share stable `ChoiceItem` navigation and a `topIndex`
+viewport offset. Up/Down, Home/End, and PageUp/PageDown skip disabled items and
+keep the active row visible. List movement changes `selected`; menu movement
+changes `active`, while only Enter emits an `activated` menu event. `setItems`
+preserves enabled IDs across reorder/rename and otherwise chooses the specified
+forward-then-backward fallback. Application payloads remain in maps keyed by
+`ItemId`.
+
 Text field values must be valid UTF-8 single-line text without terminal control
 characters. Full cursor editing, validation callbacks, and limits belong to the
 text-editing phase.
@@ -221,6 +229,8 @@ The repository includes these runnable examples:
   fixed/flex layout, stored allocations, and focus traversal without terminal I/O.
 - [`examples/basic_controls.nim`](examples/basic_controls.nim) drives checkbox,
   switch, and radio state through the public dispatcher and prints final values.
+- [`examples/selection_navigation.nim`](examples/selection_navigation.nim)
+  demonstrates shared list/menu navigation and explicit menu activation.
 - [`examples/package_import.nim`](examples/package_import.nim) verifies that a
   facade import does not initialize a terminal session.
 

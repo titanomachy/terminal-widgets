@@ -4,6 +4,13 @@ All notable changes to TerminalWidgets are documented in this file.
 
 ## Unreleased
 
+### Lists and menus
+
+- Added shared stable-key selection, disabled-item navigation, page movement,
+  viewport offsets, and replacement reconciliation for lists and menus.
+- Added list selection events and distinct repeatable menu activation events.
+- Added dispatcher-level selection tests and a runnable navigation example.
+
 ### Basic controls
 
 - Added Space/Enter activation and stable ASCII markers for checkboxes and

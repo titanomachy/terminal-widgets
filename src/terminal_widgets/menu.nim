@@ -5,22 +5,50 @@ import terminal_widgets/[selection, types, widget]
 
 type Menu* = ref object of Widget
   itemsValue: seq[ChoiceItem]
-  activeValue: Option[ItemId]
-
-proc firstEnabled(items: openArray[ChoiceItem]): Option[ItemId] =
-  for item in items:
-    if item.enabled:
-      return some(item.id)
-  none(ItemId)
+  modelValue: SelectionModel
 
 proc newMenu*(id: WidgetId; items: openArray[ChoiceItem]): Menu =
   validateItems(items)
   new result
   result.initializeWidgetState(id, "")
   result.itemsValue = snapshotItems(items)
-  result.activeValue = firstEnabled(items)
+  result.modelValue = initSelectionModel(items)
 
 proc items*(menu: Menu): seq[ChoiceItem] = snapshotItems(menu.itemsValue)
-proc active*(menu: Menu): Option[ItemId] = menu.activeValue
+proc active*(menu: Menu): Option[ItemId] = menu.modelValue.active
+proc topIndex*(menu: Menu): int = menu.modelValue.topIndex
+
+proc viewportHeight(menu: Menu): int =
+  if menu.allocation.isSome: menu.allocation.get.height else: 0
+
+proc setActive*(menu: Menu; value: Option[ItemId]) =
+  if menu.modelValue.setActive(menu.itemsValue, value, menu.viewportHeight):
+    menu.touchWidgetState()
+
+proc setItems*(menu: Menu; items: openArray[ChoiceItem]) =
+  validateItems(items)
+  let stored = snapshotItems(items)
+  var model = menu.modelValue
+  let stateChanged = model.replace(menu.itemsValue, stored, menu.viewportHeight)
+  if menu.itemsValue != stored or stateChanged:
+    menu.itemsValue = stored
+    menu.modelValue = model
+    menu.touchWidgetState()
 
 method canFocus*(menu: Menu): bool = menu.itemsValue.hasEnabled
+
+method handleInput*(menu: Menu; input: InputEvent): DispatchResult =
+  if input.kind != eventKey: return
+  if input.keyEvent.key in {
+      keyArrowUp, keyArrowDown, keyHome, keyEnd, keyPageUp, keyPageDown}:
+    result.handled = true
+    if menu.modelValue.navigate(menu.itemsValue, input.keyEvent.key,
+        menu.viewportHeight):
+      menu.touchWidgetState()
+      result.needsRender = true
+      result.events.add WidgetEvent(kind: selectionChanged, source: menu.id,
+        selection: menu.active)
+  elif input.keyEvent.key == keyEnter and menu.active.isSome:
+    result.handled = true
+    result.events.add WidgetEvent(kind: activated, source: menu.id,
+      item: menu.active.get)
