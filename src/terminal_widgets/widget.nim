@@ -12,10 +12,23 @@ type Widget* = ref object of RootObj
   helpValue: Option[string]
   revisionValue: uint64
   treeOwnedValue: bool
+  allocationValue: Option[Rect]
 
 method childWidgets*(widget: Widget): seq[Widget] {.base.} =
   ## Internal traversal hook overridden by composite widgets.
   @[]
+
+method interactionChildren*(widget: Widget): seq[Widget] {.base.} =
+  ## Children currently participating in layout, focus, and dispatch.
+  widget.childWidgets()
+
+method canFocus*(widget: Widget): bool {.base.} =
+  ## Whether this widget can be one focus stop when otherwise eligible.
+  false
+
+method handleInput*(widget: Widget; input: InputEvent): DispatchResult {.base.} =
+  ## Handles one routed input event; concrete controls override this hook.
+  dispatchResult()
 
 proc initializeWidgetState*(widget: Widget; id: WidgetId; label: string) =
   ## Internal cross-module initializer; applications should use constructors.
@@ -29,6 +42,7 @@ proc initializeWidgetState*(widget: Widget; id: WidgetId; label: string) =
   widget.helpValue = none(string)
   widget.revisionValue = 0
   widget.treeOwnedValue = false
+  widget.allocationValue = none(Rect)
 
 proc touchWidgetState*(widget: Widget) =
   ## Internal revision update used by state-changing control setters.
@@ -47,6 +61,11 @@ proc enabled*(widget: Widget): bool = widget.enabledValue
 proc label*(widget: Widget): string = widget.labelValue
 proc helpText*(widget: Widget): Option[string] = widget.helpValue
 proc revision*(widget: Widget): uint64 = widget.revisionValue
+proc allocation*(widget: Widget): Option[Rect] = widget.allocationValue
+
+proc setAllocation*(widget: Widget; value: Option[Rect]) =
+  ## Internal layout update; allocation does not change application state.
+  widget.allocationValue = value
 
 proc setVisible*(widget: Widget; value: bool) =
   ## Changes local visibility and invalidates the widget only on transition.

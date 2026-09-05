@@ -12,6 +12,8 @@ proc newSwitch*(id: WidgetId; label: string; on = false): Switch =
 
 proc isOn*(switch: Switch): bool = switch.onValue
 
+method canFocus*(switch: Switch): bool = true
+
 proc setOn*(switch: Switch; value: bool) =
   ## Programmatic changes invalidate rendering but emit no user event.
   if switch.onValue != value:

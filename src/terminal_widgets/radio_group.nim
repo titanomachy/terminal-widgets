@@ -25,6 +25,8 @@ proc newRadioGroup*(id: WidgetId; items: openArray[ChoiceItem];
 proc items*(group: RadioGroup): seq[ChoiceItem] = snapshotItems(group.itemsValue)
 proc selected*(group: RadioGroup): Option[ItemId] = group.selectedValue
 
+method canFocus*(group: RadioGroup): bool = group.itemsValue.hasEnabled
+
 proc setSelected*(group: RadioGroup; value: Option[ItemId]) =
   if value.isSome and not group.itemsValue.accepts(value.get):
     raise newException(ValueError, "selected item must exist and be enabled")

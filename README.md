@@ -48,6 +48,7 @@ TerminalDeck
   - [IDs and geometry](#ids-and-geometry)
   - [Retained widget state](#retained-widget-state)
   - [Keyed controls and composition](#keyed-controls-and-composition)
+  - [Layout and focus routing](#layout-and-focus-routing)
   - [Input and output events](#input-and-output-events)
 - [Examples](#examples)
 - [Development and documentation](#development-and-documentation)
@@ -180,12 +181,29 @@ available from the facade. `WidgetEvent` is a tagged object with a source
 `DispatchResult` carries `handled`, `needsRender`, and an ordered event sequence.
 Actual routing and event emission are introduced with focus and control behavior.
 
+### Layout and focus routing
+
+Rows and columns allocate visible children along their main axis; stacks give
+each visible child the same content rectangle. Configure nonnegative padding and
+gaps with `setPadding` and `setGap`, and set direct children to `fixed(cells)` or
+positive `flex(weight)` sizing with `setSizing`. Calling `layout(tree, size)`
+stores clipped cell allocations without querying the terminal.
+
+Each tree owns an independent depth-first focus order. Eligible controls must be
+effectively visible, enabled, and allocated nonzero space. `requestFocus` rejects
+ineligible IDs atomically. `dispatch` handles Tab and Backtab with wrapping,
+routes other normalized input to the focused widget, and bubbles unhandled input
+through its ancestors. Concrete control key behavior is introduced in the
+control-specific phases.
+
 ## Examples
 
 The repository includes these runnable examples:
 
 - [`examples/core_model.nim`](examples/core_model.nim) constructs and updates a
   retained preferences tree using only the facade.
+- [`examples/composition_focus.nim`](examples/composition_focus.nim) demonstrates
+  fixed/flex layout, stored allocations, and focus traversal without terminal I/O.
 - [`examples/package_import.nim`](examples/package_import.nim) verifies that a
   facade import does not initialize a terminal session.
 

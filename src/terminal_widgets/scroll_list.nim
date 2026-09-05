@@ -22,3 +22,5 @@ proc newScrollList*(id: WidgetId; items: openArray[ChoiceItem]): ScrollList =
 
 proc items*(list: ScrollList): seq[ChoiceItem] = snapshotItems(list.itemsValue)
 proc selected*(list: ScrollList): Option[ItemId] = list.selectedValue
+
+method canFocus*(list: ScrollList): bool = list.itemsValue.hasEnabled

@@ -22,3 +22,5 @@ proc newMenu*(id: WidgetId; items: openArray[ChoiceItem]): Menu =
 
 proc items*(menu: Menu): seq[ChoiceItem] = snapshotItems(menu.itemsValue)
 proc active*(menu: Menu): Option[ItemId] = menu.activeValue
+
+method canFocus*(menu: Menu): bool = menu.itemsValue.hasEnabled

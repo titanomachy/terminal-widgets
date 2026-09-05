@@ -62,8 +62,16 @@ proc newTabs*(id: WidgetId; pages: openArray[TabPage]): Tabs =
 proc pages*(tabs: Tabs): seq[TabPage] = snapshotPages(tabs.pagesValue)
 proc active*(tabs: Tabs): Option[ItemId] = tabs.activeValue
 
+method canFocus*(tabs: Tabs): bool = tabs.activeValue.isSome
+
 method childWidgets*(tabs: Tabs): seq[Widget] =
   ## Exposes retained page roots to internal tree validation and traversal.
   result = newSeqOfCap[Widget](tabs.pagesValue.len)
   for page in tabs.pagesValue:
     result.add page.child
+
+method interactionChildren*(tabs: Tabs): seq[Widget] =
+  if tabs.activeValue.isSome:
+    for page in tabs.pagesValue:
+      if page.id == tabs.activeValue.get:
+        return @[page.child]

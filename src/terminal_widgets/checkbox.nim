@@ -12,6 +12,8 @@ proc newCheckbox*(id: WidgetId; label: string; checked = false): Checkbox =
 
 proc checked*(checkbox: Checkbox): bool = checkbox.checkedValue
 
+method canFocus*(checkbox: Checkbox): bool = true
+
 proc setChecked*(checkbox: Checkbox; value: bool) =
   ## Programmatic changes invalidate rendering but emit no user event.
   if checkbox.checkedValue != value:

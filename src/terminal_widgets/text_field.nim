@@ -23,6 +23,8 @@ proc newTextField*(id: WidgetId; label = ""; value = ""): TextField =
 
 proc value*(field: TextField): string = field.valueText
 
+method canFocus*(field: TextField): bool = true
+
 proc setValue*(field: TextField; value: string) =
   ## Replaces the value atomically after single-line text validation.
   validateFieldText(value)

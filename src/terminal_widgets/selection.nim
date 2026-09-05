@@ -34,3 +34,8 @@ proc snapshotItems*(items: openArray[ChoiceItem]): seq[ChoiceItem] =
   result = newSeqOfCap[ChoiceItem](items.len)
   for item in items:
     result.add item
+
+proc hasEnabled*(items: openArray[ChoiceItem]): bool =
+  for item in items:
+    if item.enabled:
+      return true

@@ -4,6 +4,15 @@ All notable changes to TerminalWidgets are documented in this file.
 
 ## Unreleased
 
+### Composition and focus
+
+- Added row, column, and stack allocation with saturating padding/gaps and
+  deterministic fixed/weighted-flex sizing.
+- Added stored cell allocations, depth-first per-tree focus order, focus repair,
+  explicit focus requests, and wrapping Tab/Backtab traversal.
+- Added focused input routing with single-delivery ancestor bubbling and resize
+  layout handling, plus a runnable headless composition example.
+
 ### Core public model
 
 - Added distinct validated widget/item IDs, overflow-safe cell geometry,
