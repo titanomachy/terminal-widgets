@@ -196,6 +196,12 @@ routes other normalized input to the focused widget, and bubbles unhandled input
 through its ancestors. Concrete control key behavior is introduced in the
 control-specific phases.
 
+Use `detach(tree, id)` to remove a non-root subtree and release its tree
+ownership, `attach(tree, parentId, widget)` to add a validated detached subtree,
+and `move(tree, id, newParentId)` to reparent an owned subtree atomically. These
+operations retain widget objects and values and repair focus against the latest
+layout size.
+
 ## Examples
 
 The repository includes these runnable examples:

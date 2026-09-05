@@ -12,6 +12,10 @@ All notable changes to TerminalWidgets are documented in this file.
   explicit focus requests, and wrapping Tab/Backtab traversal.
 - Added focused input routing with single-delivery ancestor bubbling and resize
   layout handling, plus a runnable headless composition example.
+- Added validated attach, detach, and atomic move operations with ownership
+  release, retained widget state, allocation refresh, and focus repair.
+- Added acceptance coverage for hidden/disabled/removed/moved focus, empty and
+  zero-space trees, oversized padding, nested resize, and repeated layout state.
 
 ### Core public model
 

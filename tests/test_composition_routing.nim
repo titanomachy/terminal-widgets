@@ -83,3 +83,61 @@ suite "composition layout, focus, and routing":
     check outcome.handled
     check leaf.calls == 1
     check parent.calls == 1
+
+  test "layout repairs focus after hiding disabling and detaching":
+    let first = newCheckbox(newWidgetId("first"), "First")
+    let second = newCheckbox(newWidgetId("second"), "Second")
+    let third = newCheckbox(newWidgetId("third"), "Third")
+    let root = newColumn(newWidgetId("root"),
+      [Widget(first), Widget(second), Widget(third)])
+    let tree = newWidgetTree(root)
+    discard tree.layout(newSize(10, 3))
+    first.setVisible(false)
+    let hiddenRepair = tree.layout(newSize(10, 3))
+    check tree.focused == some(second.id)
+    check hiddenRepair.events.len == 1
+    second.setEnabled(false)
+    discard tree.layout(newSize(10, 3))
+    check tree.focused == some(third.id)
+    let detached = tree.detach(third.id)
+    check detached.events.len == 1
+    check tree.focused.isNone
+    check not third.allocation.isSome
+
+  test "moving a focused widget retains identity and focus":
+    let moving = newTextField(newWidgetId("moving"), value = "retained")
+    let left = newColumn(newWidgetId("left"), [Widget(moving)])
+    let right = newColumn(newWidgetId("right"))
+    let root = newRow(newWidgetId("root"), [Widget(left), Widget(right)])
+    let tree = newWidgetTree(root)
+    discard tree.layout(newSize(10, 2))
+    discard tree.move(moving.id, right.id)
+    check tree.focused == some(moving.id)
+    check moving.value == "retained"
+    check left.children.len == 0
+    check right.children[0] == Widget(moving)
+
+  test "zero space oversized padding and resize remain bounded":
+    let child = newCheckbox(newWidgetId("child"), "Child")
+    let nested = newColumn(newWidgetId("nested"), [Widget(child)])
+    nested.setPadding(newPadding(50))
+    let root = newRow(newWidgetId("root"), [Widget(nested)])
+    let tree = newWidgetTree(root)
+    discard tree.layout(newSize(0, 0))
+    check child.allocation == some(newRect(0, 0, 0, 0))
+    check tree.focused.isNone
+    discard tree.dispatch(resizeInput(terminalSize(4, 2)))
+    check child.allocation == some(newRect(4, 2, 0, 0))
+
+  test "repeated layout preserves focus values and revisions":
+    let field = newTextField(newWidgetId("field"), value = "stable")
+    let tree = newWidgetTree(field)
+    discard tree.layout(newSize(10, 1))
+    let revision = field.revision
+    let focused = tree.focused
+    let allocation = field.allocation
+    discard tree.layout(newSize(10, 1))
+    check field.value == "stable"
+    check field.revision == revision
+    check field.allocation == allocation
+    check tree.focused == focused

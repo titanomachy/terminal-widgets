@@ -381,3 +381,99 @@ proc layout*(tree: WidgetTree; size: Size): DispatchResult =
   if previous.isSome and tree.focusValue != previous:
     result.events.add WidgetEvent(kind: focusChanged, source: tree.rootValue.id,
       previousFocus: previous, newFocus: tree.focusValue)
+
+proc detach*(tree: WidgetTree; id: WidgetId): DispatchResult =
+  ## Detaches a non-root subtree, releases ownership, and repairs focus.
+  if id == tree.rootValue.id:
+    raise newException(ValueError, "cannot detach the tree root")
+  let widget = tree.nodeById(id)
+  if widget.isNil:
+    raise newException(ValueError, "widget does not belong to this tree: " & $id)
+  let parentId = tree.parentOf(id)
+  if parentId.isNone or not (tree.nodeById(parentId.get) of Container):
+    raise newException(ValueError, "widget parent cannot detach children")
+  let parent = Container(tree.nodeById(parentId.get))
+  var replacement: seq[Widget]
+  for child in parent.childrenValue:
+    if child.id != id:
+      replacement.add child
+  parent.childrenValue = move(replacement)
+  parent.sizingValue.del(id)
+  parent.touchWidgetState()
+
+  proc release(current: Widget) =
+    for child in current.childWidgets():
+      release(child)
+    tree.nodesValue.del(current.id)
+    tree.parentsValue.del(current.id)
+    current.setTreeOwned(false)
+    current.setAllocation(none(Rect))
+  release(widget)
+  if tree.layoutSizeValue.isSome:
+    result = tree.layout(tree.layoutSizeValue.get)
+  else:
+    result.needsRender = true
+
+proc attach*(tree: WidgetTree; parentId: WidgetId; child: Widget;
+             index = -1): DispatchResult =
+  ## Attaches one detached subtree to a container after complete validation.
+  let parentWidget = tree.nodeById(parentId)
+  if parentWidget.isNil or not (parentWidget of Container):
+    raise newException(ValueError, "attachment parent must be a tree container")
+  let entries = validateGraph(child)
+  for entry in entries:
+    if entry.widget.id in tree.nodesValue:
+      raise newException(ValueError, "duplicate widget ID: " & $entry.widget.id)
+  let parent = Container(parentWidget)
+  let insertion = if index < 0: parent.childrenValue.len else: index
+  if insertion < 0 or insertion > parent.childrenValue.len:
+    raise newException(ValueError, "attachment index is out of range")
+  parent.childrenValue.insert(child, insertion)
+  parent.touchWidgetState()
+  for entry in entries:
+    tree.nodesValue[entry.widget.id] = entry.widget
+    tree.parentsValue[entry.widget.id] =
+      if entry.widget == child: some(parentId) else: entry.parent
+    entry.widget.setTreeOwned(true)
+  if tree.layoutSizeValue.isSome:
+    result = tree.layout(tree.layoutSizeValue.get)
+  else:
+    result.needsRender = true
+
+proc move*(tree: WidgetTree; id, newParentId: WidgetId;
+           index = -1): DispatchResult =
+  ## Atomically reparents an owned subtree while preserving widget identity.
+  if id == tree.rootValue.id:
+    raise newException(ValueError, "cannot move the tree root")
+  let widget = tree.nodeById(id)
+  let targetWidget = tree.nodeById(newParentId)
+  if widget.isNil or targetWidget.isNil or not (targetWidget of Container):
+    raise newException(ValueError, "move requires an owned widget and container")
+  var subtreeIds = initHashSet[WidgetId]()
+  proc collect(current: Widget) =
+    subtreeIds.incl current.id
+    for descendant in current.childWidgets(): collect(descendant)
+  collect(widget)
+  if newParentId in subtreeIds:
+    raise newException(ValueError, "move would create a cycle")
+  let target = Container(targetWidget)
+  let insertion = if index < 0: target.childrenValue.len else: index
+  if insertion < 0 or insertion > target.childrenValue.len:
+    raise newException(ValueError, "move index is out of range")
+  let oldParent = Container(tree.nodeById(tree.parentOf(id).get))
+  var replacement: seq[Widget]
+  for child in oldParent.childrenValue:
+    if child.id != id: replacement.add child
+  oldParent.childrenValue = move(replacement)
+  oldParent.sizingValue.del(id)
+  var adjusted = insertion
+  if oldParent == target and insertion > oldParent.childrenValue.len:
+    adjusted = oldParent.childrenValue.len
+  target.childrenValue.insert(widget, adjusted)
+  tree.parentsValue[id] = some(newParentId)
+  oldParent.touchWidgetState()
+  if target != oldParent: target.touchWidgetState()
+  if tree.layoutSizeValue.isSome:
+    result = tree.layout(tree.layoutSizeValue.get)
+  else:
+    result.needsRender = true
