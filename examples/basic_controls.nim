@@ -28,3 +28,5 @@ echo updates.marker, " ", updates.label
 echo network.marker, " ", network.label
 echo "selected: ", mode.selected.get
 echo "events: ", selection.events.len
+for line in renderControl(mode, plainWidgetTheme(), focused = true):
+  echo line

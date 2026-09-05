@@ -7,11 +7,11 @@
 ## rendering are added by their corresponding implementation phases.
 
 import terminal_widgets/[checkbox, composition, dispatch, menu, radio_group,
-  scroll_list, selection, switch, tabs, text_field, types, widget]
+  render, scroll_list, selection, switch, tabs, text_field, theme, types, widget]
 
 export checkbox
 export composition except moveFocus, nodeById, parentOf
-export dispatch, menu, radio_group, scroll_list, selection, switch, tabs,
-  text_field, types
+export dispatch, menu, radio_group, render, scroll_list, selection, switch, tabs,
+  text_field, theme, types
 export widget except canFocus, childWidgets, handleInput, initializeWidgetState,
   interactionChildren, isTreeOwned, setAllocation, setTreeOwned, touchWidgetState

@@ -11,6 +11,10 @@ All notable changes to TerminalWidgets are documented in this file.
 - Added radio active-item navigation across enabled choices, explicit selection,
   and transition-only selection events.
 - Added dispatcher-level tests and a runnable headless basic-controls example.
+- Added atomic radio-item replacement with stable-key reconciliation and
+  deterministic plain/styled semantic control frames using TerminalStyle.
+- Covered disabled and empty controls, boundary navigation, repeat activation,
+  replacement fallback, and exact plain/ANSI snapshots.
 
 ### Composition and focus
 

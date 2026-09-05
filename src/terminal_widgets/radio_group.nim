@@ -46,6 +46,39 @@ proc setSelected*(group: RadioGroup; value: Option[ItemId]) =
       group.activeValue = value
     group.touchWidgetState()
 
+proc replacement(items: openArray[ChoiceItem]; oldItems: openArray[ChoiceItem];
+                 oldValue: Option[ItemId]): Option[ItemId] =
+  if oldValue.isNone: return none(ItemId)
+  for item in items:
+    if item.id == oldValue.get and item.enabled: return oldValue
+  var oldIndex = 0
+  for index, item in oldItems:
+    if item.id == oldValue.get:
+      oldIndex = index
+      break
+  if items.len == 0: return none(ItemId)
+  let start = min(oldIndex, items.high)
+  for index in start .. items.high:
+    if items[index].enabled: return some(items[index].id)
+  if start > 0:
+    for index in countdown(start - 1, 0):
+      if items[index].enabled: return some(items[index].id)
+  none(ItemId)
+
+proc setItems*(group: RadioGroup; items: openArray[ChoiceItem]) =
+  ## Atomically replaces choices while reconciling active and selected IDs.
+  validateItems(items)
+  let stored = snapshotItems(items)
+  var nextActive = replacement(stored, group.itemsValue, group.activeValue)
+  if group.activeValue.isNone: nextActive = firstEnabled(stored)
+  let nextSelected = replacement(stored, group.itemsValue, group.selectedValue)
+  if group.itemsValue != stored or group.activeValue != nextActive or
+      group.selectedValue != nextSelected:
+    group.itemsValue = stored
+    group.activeValue = nextActive
+    group.selectedValue = nextSelected
+    group.touchWidgetState()
+
 proc enabledIds(group: RadioGroup): seq[ItemId] =
   for item in group.itemsValue:
     if item.enabled: result.add item.id

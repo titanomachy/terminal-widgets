@@ -149,6 +149,9 @@ Checkboxes and switches toggle on Space or Enter and expose stable plain markers
 separate from the optional `selected` value: Up/Down and Home/End move across
 enabled choices, while Space or Enter selects the active choice. User value
 transitions return exactly one typed event; programmatic setters return none.
+`renderControl` produces deterministic semantic lines for these controls with
+either `plainWidgetTheme()` or styled `defaultWidgetTheme()` output. The shared
+tree-level clipping and compositing renderer is completed in the rendering phase.
 
 Text field values must be valid UTF-8 single-line text without terminal control
 characters. Full cursor editing, validation callbacks, and limits belong to the
