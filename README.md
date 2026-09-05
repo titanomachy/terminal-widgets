@@ -170,8 +170,10 @@ Tabs retain keyed page roots and reserve one allocated row for their header.
 Left/Right and Home/End move among enabled headers; the active page alone enters
 layout and depth-first focus traversal. Header scrolling is measured in display
 cells and keeps the active header start visible when a single label is wider
-than the viewport. Inactive page widgets keep editor values, selections, and
-scroll offsets across tab changes.
+than the viewport. `renderControl` returns the clipped one-row semantic header;
+plain output uses brackets for the active page and parentheses for disabled
+pages. Inactive page widgets keep editor values, selections, and scroll offsets
+across tab changes.
 
 Text field values must be valid UTF-8 single-line text without terminal control
 characters. Full cursor editing, validation callbacks, and limits belong to the
@@ -183,6 +185,12 @@ text-editing phase.
 Duplicate item/page IDs and selections targeting missing or disabled choices are
 rejected. Collection getters return independent sequence storage, while widget
 references intentionally preserve identity.
+
+Use `setPages` to replace or reorder pages while tabs are detached. Once tabs
+belong to a tree, call `replacePages(tree, tabs.id, pages)`: it preserves an
+enabled active ID when possible, otherwise searches from the old position
+forward and then backward. Removed page roots release ownership, newly added
+roots are validated atomically, and focus is repaired if its page disappears.
 
 `newRow`, `newColumn`, and `newStack` create retained containers. Detached
 containers may replace their children atomically with `setChildren`; duplicate
@@ -244,12 +252,14 @@ The repository includes these runnable examples:
 - [`examples/selection_navigation.nim`](examples/selection_navigation.nim)
   demonstrates shared list/menu navigation and explicit menu activation.
 - [`examples/tabs_retained.nim`](examples/tabs_retained.nim) switches between
-  retained pages and demonstrates preserved editor and list state.
+  three retained pages, prints a semantic header, and demonstrates preserved
+  state plus tree-managed page removal and reordering.
 - [`examples/package_import.nim`](examples/package_import.nim) verifies that a
   facade import does not initialize a terminal session.
 
-Examples currently exercise a side-effect-free model and do not render a visual
-terminal UI, so no terminal screenshot or animated recording is applicable yet.
+Examples currently exercise a side-effect-free model and semantic render data;
+they do not run a visual terminal session, so no terminal screenshot or animated
+recording is applicable yet.
 
 ## Development and documentation
 

@@ -6,7 +6,7 @@
 import std/options
 import terminal_style
 import terminal_widgets/[checkbox, menu, radio_group, scroll_list, selection,
-  switch, theme, types, widget]
+  switch, tabs, theme, types, widget]
 
 type RenderMetrics* = object
   ## Observable work counters used by rendering performance verification.
@@ -94,3 +94,28 @@ proc renderControl*(menu: Menu; theme: WidgetTheme;
                     focused = false; enabled = true): seq[string] =
   var metrics: RenderMetrics
   renderControl(menu, theme, metrics, focused, enabled)
+
+proc renderControl*(tabs: Tabs; theme: WidgetTheme;
+                    focused = false; enabled = true): seq[string] =
+  ## Renders the allocated, cell-clipped tab header. Brackets identify the
+  ## active page in plain mode; parentheses identify disabled pages.
+  let bounds = tabs.allocation
+  if bounds.isNone or bounds.get.width == 0 or bounds.get.height == 0:
+    return @[]
+  var header = ""
+  for index, page in tabs.pages:
+    if index > 0:
+      header.add present("|", theme.normal, theme)
+    let active = tabs.active == some(page.id)
+    let text =
+      if active: "[" & page.label & "]"
+      elif not page.enabled: "(" & page.label & ")"
+      else: " " & page.label & " "
+    let style =
+      if not enabled or not page.enabled: theme.disabled
+      elif focused and active: theme.focused
+      elif active: theme.selected
+      else: theme.normal
+    header.add present(text, style, theme)
+  @[padAnsi(sliceAnsi(header, tabs.headerOffset, bounds.get.width),
+    bounds.get.width)]

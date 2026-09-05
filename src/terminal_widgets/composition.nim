@@ -4,7 +4,7 @@
 ## Phase 02. Detached containers may replace children before attachment.
 
 import std/[options, sets, tables]
-import terminal_widgets/[focus, types, widget]
+import terminal_widgets/[focus, tabs, types, widget]
 
 type
   ContainerKind* = enum
@@ -79,8 +79,9 @@ proc copyChildren(children: openArray[Widget]): seq[Widget] =
       raise newException(ValueError, "container child must not be nil")
     result.add child
 
-proc validateGraph(root: Widget; prospectiveContainer: Container = nil;
-                   prospectiveChildren: seq[Widget] = @[]): seq[GraphEntry] =
+proc validateGraph(root: Widget; prospectiveWidget: Widget = nil;
+                   prospectiveChildren: seq[Widget] = @[];
+                   rejectOwned = true): seq[GraphEntry] =
   ## Validates a complete prospective graph without mutating widget state.
   var visiting = initHashSet[pointer]()
   var visited = initHashSet[pointer]()
@@ -98,14 +99,14 @@ proc validateGraph(root: Widget; prospectiveContainer: Container = nil;
       raise newException(ValueError, "widget must not be attached more than once")
     if current.id in ids:
       raise newException(ValueError, "duplicate widget ID: " & $current.id)
-    if current.isTreeOwned:
+    if rejectOwned and current.isTreeOwned:
       raise newException(ValueError, "widget already belongs to a tree: " & $current.id)
 
     visiting.incl identity
     ids.incl current.id
     entries.add (current, parent)
     let children =
-      if not prospectiveContainer.isNil and current == Widget(prospectiveContainer):
+      if not prospectiveWidget.isNil and current == prospectiveWidget:
         prospectiveChildren
       else:
         current.childWidgets()
@@ -444,6 +445,60 @@ proc attach*(tree: WidgetTree; parentId: WidgetId; child: Widget;
     tree.parentsValue[entry.widget.id] =
       if entry.widget == child: some(parentId) else: entry.parent
     entry.widget.setTreeOwned(true)
+  if tree.layoutSizeValue.isSome:
+    result = tree.layout(tree.layoutSizeValue.get)
+  else:
+    result.needsRender = true
+
+proc replacePages*(tree: WidgetTree; tabsId: WidgetId;
+                   pages: openArray[TabPage]): DispatchResult =
+  ## Atomically replaces pages of attached tabs and repairs descendant focus.
+  let target = tree.nodeById(tabsId)
+  if target.isNil or not (target of Tabs):
+    raise newException(ValueError, "page replacement target must be owned tabs")
+  validateTabPages(pages)
+  let tabsWidget = Tabs(target)
+
+  var oldPointers = initHashSet[pointer]()
+  proc collectOld(current: Widget) =
+    oldPointers.incl cast[pointer](current)
+    for child in current.childWidgets(): collectOld(child)
+  for child in tabsWidget.childWidgets(): collectOld(child)
+
+  let entries = validateGraph(target, target, tabPageChildren(pages),
+    rejectOwned = false)
+  var nextPointers = initHashSet[pointer]()
+  for entry in entries:
+    if entry.widget == target: continue
+    let identity = cast[pointer](entry.widget)
+    nextPointers.incl identity
+    if entry.widget.isTreeOwned:
+      if identity notin oldPointers or tree.nodeById(entry.widget.id) != entry.widget:
+        raise newException(ValueError,
+          "widget already belongs to a tree: " & $entry.widget.id)
+    elif entry.widget.id in tree.nodesValue:
+      raise newException(ValueError, "duplicate widget ID: " & $entry.widget.id)
+
+  var oldWidgets: seq[Widget]
+  proc snapshotOld(current: Widget) =
+    oldWidgets.add current
+    for child in current.childWidgets(): snapshotOld(child)
+  for child in tabsWidget.childWidgets(): snapshotOld(child)
+
+  for oldWidget in oldWidgets:
+    if cast[pointer](oldWidget) notin nextPointers:
+      tree.nodesValue.del(oldWidget.id)
+      tree.parentsValue.del(oldWidget.id)
+      oldWidget.setTreeOwned(false)
+      oldWidget.setAllocation(none(Rect))
+
+  tabsWidget.applyTabPages(pages)
+  for entry in entries:
+    if entry.widget == target: continue
+    tree.nodesValue[entry.widget.id] = entry.widget
+    tree.parentsValue[entry.widget.id] = entry.parent
+    entry.widget.setTreeOwned(true)
+
   if tree.layoutSizeValue.isSome:
     result = tree.layout(tree.layoutSizeValue.get)
   else:

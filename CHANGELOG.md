@@ -10,6 +10,10 @@ All notable changes to TerminalWidgets are documented in this file.
   offsets, immediate active-page focus integration, and selection events.
 - Preserved retained editor values, list selections, and scroll offsets across
   tab changes, with a runnable multi-state example.
+- Added atomic detached and tree-managed page replacement with stable-key
+  reorder preservation, positional fallback, ownership updates, and focus repair.
+- Added clipped semantic tab headers plus coverage for empty, all-disabled,
+  narrow, removed, reordered, foreign-owned, and nested tab compositions.
 
 ### Lists and menus
 

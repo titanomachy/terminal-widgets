@@ -33,12 +33,14 @@ proc child*(page: TabPage): Widget = page.childValue
 proc setLabel*(page: var TabPage; value: string) = page.labelValue = value
 proc setEnabled*(page: var TabPage; value: bool) = page.enabledValue = value
 
-proc snapshotPages(pages: openArray[TabPage]): seq[TabPage] =
+proc snapshotTabPages*(pages: openArray[TabPage]): seq[TabPage] =
+  ## Internal snapshot helper used by tree-managed page replacement.
   result = newSeqOfCap[TabPage](pages.len)
   for page in pages:
     result.add page
 
-proc validatePages(pages: openArray[TabPage]) =
+proc validateTabPages*(pages: openArray[TabPage]) =
+  ## Internal validation shared by detached and tree-managed replacement.
   var seen = initHashSet[ItemId]()
   for page in pages:
     page.id.requireValid()
@@ -55,19 +57,69 @@ proc firstEnabled(pages: openArray[TabPage]): Option[ItemId] =
   none(ItemId)
 
 proc newTabs*(id: WidgetId; pages: openArray[TabPage]): Tabs =
-  validatePages(pages)
+  validateTabPages(pages)
   new result
   result.initializeWidgetState(id, "")
-  result.pagesValue = snapshotPages(pages)
+  result.pagesValue = snapshotTabPages(pages)
   result.activeValue = firstEnabled(pages)
 
-proc pages*(tabs: Tabs): seq[TabPage] = snapshotPages(tabs.pagesValue)
+proc pages*(tabs: Tabs): seq[TabPage] = snapshotTabPages(tabs.pagesValue)
 proc active*(tabs: Tabs): Option[ItemId] = tabs.activeValue
 proc headerOffset*(tabs: Tabs): int = tabs.headerOffsetValue
 
 proc accepts(pages: openArray[TabPage]; id: ItemId): bool =
   for page in pages:
     if page.id == id: return page.enabled
+
+proc pageIndex(pages: openArray[TabPage]; id: ItemId): int =
+  for index, page in pages:
+    if page.id == id: return index
+  -1
+
+proc replacement(pages, oldPages: openArray[TabPage];
+                 previous: Option[ItemId]): Option[ItemId] =
+  if previous.isSome and pages.accepts(previous.get):
+    return previous
+  if pages.len == 0:
+    return none(ItemId)
+  var oldIndex = 0
+  if previous.isSome:
+    let found = oldPages.pageIndex(previous.get)
+    if found >= 0: oldIndex = found
+  let start = min(oldIndex, pages.high)
+  for index in start .. pages.high:
+    if pages[index].enabled: return some(pages[index].id)
+  if start > 0:
+    for index in countdown(start - 1, 0):
+      if pages[index].enabled: return some(pages[index].id)
+  none(ItemId)
+
+proc tabPageChildren*(pages: openArray[TabPage]): seq[Widget] =
+  ## Internal child projection used by composition ownership validation.
+  result = newSeqOfCap[Widget](pages.len)
+  for page in pages:
+    result.add page.child
+
+proc applyTabPages*(tabs: Tabs; pages: openArray[TabPage]) =
+  ## Internal mutation hook; callers must validate ownership before invoking it.
+  let stored = snapshotTabPages(pages)
+  let nextActive = replacement(stored, tabs.pagesValue, tabs.activeValue)
+  if tabs.pagesValue != stored or tabs.activeValue != nextActive:
+    tabs.pagesValue = stored
+    tabs.activeValue = nextActive
+    tabs.headerOffsetValue = 0
+    tabs.touchWidgetState()
+
+proc setPages*(tabs: Tabs; pages: openArray[TabPage]) =
+  ## Atomically replaces pages while detached, preserving an eligible active ID.
+  ## Attached tabs must use ``WidgetTree.replacePages`` so descendants remain
+  ## registered and focus can be repaired.
+  if tabs.isNil:
+    raise newException(ValueError, "tabs must not be nil")
+  if tabs.isTreeOwned:
+    raise newException(ValueError, "cannot replace pages of attached tabs")
+  validateTabPages(pages)
+  tabs.applyTabPages(pages)
 
 proc setActive*(tabs: Tabs; value: Option[ItemId]) =
   ## Programmatically selects an enabled tab without emitting a user event.
