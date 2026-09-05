@@ -287,6 +287,9 @@ The repository includes these runnable examples:
 - [`examples/text_field_editing.nim`](examples/text_field_editing.nim) exercises
   Unicode-safe insertion/deletion, a scalar limit, placeholder text, and
   validator/submission events without opening a terminal.
+- [`examples/validated_form.nim`](examples/validated_form.nim) composes two
+  validated fields, reports failed and successful submissions, and moves focus
+  through the form using only the public facade.
 - [`examples/package_import.nim`](examples/package_import.nim) verifies that a
   facade import does not initialize a terminal session.
 

@@ -1,6 +1,8 @@
-import std/[options, strutils, unittest]
+import std/[options, os, osproc, strutils, unittest]
 import terminal_style
 import terminal_widgets
+
+const repositoryRoot = currentSourcePath().parentDir().parentDir()
 
 proc fieldTree(field: TextField; width = 40; height = 1): WidgetTree =
   result = newWidgetTree(field)
@@ -35,6 +37,7 @@ suite "single-line text fields":
     check noMove.events.len == 0
 
   test "boundaries keep combining marks, modifiers, joins, and flags whole":
+    check editingBoundaries("") == @[0]
     let combining = "e\u0301x"
     check editingBoundaries(combining) == @[0, 3, 4]
     check not isEditingBoundary(combining, 1)
@@ -46,6 +49,9 @@ suite "single-line text fields":
 
     let modified = "👍🏽x"
     check editingBoundaries(modified) == @[0, 8, 9]
+    let selectedEmoji = "✊️x"
+    check editingBoundaries(selectedEmoji) == @[0, selectedEmoji.len - 1,
+      selectedEmoji.len]
     let family = "👨\u200d👩\u200d👧\u200d👦x"
     check editingBoundaries(family) == @[0, family.len - 1, family.len]
     let flag = "🇳🇱x"
@@ -59,6 +65,13 @@ suite "single-line text fields":
     check field.cursorByte == 3
     discard tree.dispatch(keyInput(keyBackspace))
     check field.value == ""
+
+    let cjk = newTextField(newWidgetId("cjk"), value = "界a")
+    let cjkTree = fieldTree(cjk)
+    discard cjkTree.dispatch(keyInput(keyArrowRight))
+    check cjk.cursorByte == "界".len
+    discard cjkTree.dispatch(keyInput(keyDelete))
+    check cjk.value == "界"
 
   test "unsafe values and malformed insertions fail atomically":
     expect ValueError:
@@ -78,6 +91,12 @@ suite "single-line text fields":
     check field.value == "safe"
     check field.cursorByte == 0
     check field.revision == revision
+    for unsafe in ["\e", "\t", "\n", "\r", "\x7f", "\u0080"]:
+      let rejected = tree.dispatch(keyInput(keyText, unsafe))
+      check rejected.handled and not rejected.needsRender
+      check rejected.events.len == 0
+      check field.value == "safe"
+      check field.revision == revision
     expect ValueError:
       field.setValue("line\rfeed")
     check field.value == "safe"
@@ -195,6 +214,35 @@ suite "single-line text fields":
     discard wideTree.dispatch(keyInput(keyEnd))
     check displayWidth(wide.visibleText(wide.contentWidth)) <= wide.contentWidth
 
+  test "invalid submission and resize preserve focus and clip cursor metadata":
+    let field = newTextField(newWidgetId("resized"), value = "界abc",
+      validator = proc(value: string): Option[string] = some("not valid"))
+    let other = newCheckbox(newWidgetId("other-resized"), "Other")
+    let root = newColumn(newWidgetId("resize-root"),
+      [Widget(field), Widget(other)])
+    let tree = newWidgetTree(root)
+    discard tree.layout(newSize(10, 2))
+    check tree.focused == some(field.id)
+    discard tree.dispatch(keyInput(keyEnd))
+    let failed = tree.dispatch(keyInput(keyEnter))
+    check failed.events.len == 1 and failed.events[0].kind == validationFailed
+    check tree.focused == some(field.id)
+    check field.value == "界abc"
+
+    discard tree.dispatch(resizeInput(terminalSize(2, 2)))
+    check field.contentWidth == 0
+    check field.cursorCell.isNone
+    check field.cursorByte == field.value.len
+    discard tree.dispatch(resizeInput(terminalSize(3, 2)))
+    check field.contentWidth == 1
+    check field.cursorCell.isSome
+    discard tree.dispatch(keyInput(keyHome))
+    check field.cursorByte == 0
+    check field.horizontalOffset == 0
+    discard tree.dispatch(keyInput(keyArrowRight))
+    check field.cursorByte == "界".len
+    check field.cursorCell.isSome
+
   test "tab leaves the field to focus management and retains text":
     let field = newTextField(newWidgetId("field"))
     let other = newCheckbox(newWidgetId("other"), "Other")
@@ -208,3 +256,47 @@ suite "single-line text fields":
     discard tree.dispatch(keyInput(keyBacktab))
     check tree.focused == some(field.id)
     check field.value == "kept"
+
+  test "tab page and focus round trips restore text exactly":
+    let field = newTextField(newWidgetId("retained-field"), value = "e\u0301界")
+    let pagePeer = newCheckbox(newWidgetId("page-peer"), "Peer")
+    let tabs = newTabs(newWidgetId("field-tabs"), [
+      newTabPage(newItemId("edit-page"), "Edit", field),
+      newTabPage(newItemId("peer-page"), "Peer", pagePeer)])
+    let tree = newWidgetTree(tabs)
+    discard tree.layout(newSize(16, 3))
+    discard tree.dispatch(keyInput(keyTab))
+    check tree.focused == some(field.id)
+    discard tree.dispatch(keyInput(keyEnd))
+    discard tree.dispatch(keyInput(keyText, "👍🏽"))
+    let exact = field.value
+    let exactCursor = field.cursorByte
+    discard tree.requestFocus(tabs.id)
+    discard tree.dispatch(keyInput(keyArrowRight))
+    check field.allocation.isNone
+    discard tree.dispatch(keyInput(keyArrowLeft))
+    check field.value == exact
+    check field.cursorByte == exactCursor
+    discard tree.dispatch(keyInput(keyTab))
+    check tree.focused == some(field.id)
+    check field.value == exact
+
+  test "validated form compiles through the public facade":
+    let source = repositoryRoot / "tests" / "support" /
+      "text_field_facade_consumer.nim"
+    let output = repositoryRoot / "build" / "bin" /
+      "text_field_facade_consumer"
+    let cache = repositoryRoot / "build" / "nimcache" /
+      "text-field-facade-consumer"
+    createDir(output.parentDir())
+    createDir(cache)
+    let compilation = execCmdEx(
+      "nim c --hints:off --out:" & quoteShell(output) &
+      " --nimcache:" & quoteShell(cache) &
+      " --path:" & quoteShell(repositoryRoot / "src") &
+      " " & quoteShell(source),
+      workingDir = repositoryRoot,
+      options = {poUsePath, poStdErrToStdOut})
+    if compilation.exitCode != 0:
+      checkpoint compilation.output
+    check compilation.exitCode == 0

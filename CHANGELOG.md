@@ -15,6 +15,9 @@ All notable changes to TerminalWidgets are documented in this file.
   explicit `submitted` events, and retained validation-error state.
 - Added horizontal viewport offsets, frame-local cursor metadata, semantic text
   windows, Unicode boundary tests, and a runnable headless editing example.
+- Added acceptance coverage for tiny resized viewports, validation focus
+  retention, exact Unicode state across tab-page round trips, and a facade-only
+  validated form example.
 
 ### Tabs
 
