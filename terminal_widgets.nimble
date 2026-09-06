@@ -62,6 +62,9 @@ task examples, "Compile examples without starting interactive sessions":
 task headlessExample, "Run the deterministic mixed-form example":
   exec "nim c -r --path:src examples/headless_form.nim"
 
+task benchmark, "Run the fixed large-list release benchmark":
+  exec "nim c -r -d:release --path:src tests/benchmark_large_list.nim"
+
 task docs, "Generate API documentation inside build/docs":
   requireSource("src/terminal_widgets.nim")
   # Isolate documentation helper compilation from repository parent configs.
@@ -75,4 +78,5 @@ task releaseCheck, "Validate the implemented package, tests, examples, and docs"
   exec "nimble packageTest"
   exec "nimble examples"
   exec "nimble headlessExample"
+  exec "nimble benchmark"
   exec "nimble docs"

@@ -13,6 +13,12 @@ All notable changes to TerminalWidgets are documented in this file.
   form exercised by the release checks.
 - Added automated isolated package installation, facade/runtime consumer
   compilation, installed-content inspection, and source-tree containment checks.
+- Added a release-mode 100,000-item benchmark with separate construction,
+  replacement, navigation, and rendering medians plus an exact 20-row visit
+  assertion and generated report under `build/reports/`.
+- Added reproducible generated event/tree sequences with per-step focus,
+  geometry, selection, UTF-8, and frame invariants, plus minimal edge fixtures
+  and documented platform/reproduction limitations.
 
 ### Interactive runtime
 

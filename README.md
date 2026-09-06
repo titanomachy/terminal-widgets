@@ -424,6 +424,11 @@ nimble docs
 nimble releaseCheck
 ```
 
+`nimble benchmark` writes the reproducible 100,000-item release benchmark to
+`build/reports/large_list_benchmark.md`. Seeded robustness tests print the exact
+seed and step on failure. Platform scope, local results, and reproduction details
+are recorded in verification records.
+
 Command-line `--out` and `--nimcache` overrides take precedence over
 `config.nims`; project automation must keep any such paths below `build/`.
 
