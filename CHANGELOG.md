@@ -4,6 +4,16 @@ All notable changes to TerminalWidgets are documented in this file.
 
 ## Unreleased
 
+### Documentation and examples
+
+- Added independently compilable checkbox, switch, radio, list, menu, tabs,
+  text-field, headless-form, and guarded interactive-form examples.
+- Added API, behavior, and runtime guides covering fixed keys, ownership,
+  Unicode scope, themes, validation/errors, terminal cleanup, and single-owner
+  companion output.
+- Updated the README quick start to match a compiled example, linked all guides
+  and required component examples, and refreshed the generated facade docs.
+
 ### Compatibility verification
 
 - Added a Nim 2.0.x/current-stable GitHub Actions matrix for Linux, macOS, and

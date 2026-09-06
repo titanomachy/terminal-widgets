@@ -1,10 +1,10 @@
 ## TerminalWidgets provides retained model types for composable terminal UI
 ## controls. Importing this facade performs no terminal I/O.
 ##
-## This initial public model includes validated IDs and geometry, normalized
-## input types, typed output events, common widget properties, persistent value
-## accessors, keyed choices/pages, and tree construction. Layout, dispatch, and
-## rendering are added by their corresponding implementation phases.
+## The facade includes validated IDs and geometry, normalized input, typed
+## output events, persistent controls, composition and focus, Unicode-aware
+## single-line editing, semantic themes, and pure full-frame rendering. Import
+## ``terminal_widgets/runtime`` explicitly for guarded terminal ownership.
 
 import terminal_widgets/[checkbox, composition, dispatch, editor, menu,
   radio_group, render, scroll_list, selection, static_text, switch, tabs,

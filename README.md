@@ -10,12 +10,11 @@ full-frame rendering, and opt-in guarded runtime are available now.
 
 ## Platform support
 
-The package is tested by a GitHub Actions matrix using Nim 2.0.x and current
-stable Nim on Linux, macOS, and Windows. Stable Linux additionally runs the
-complete suite with ARC and ORC. Local evidence currently covers Linux; matrix
-jobs remain the source of truth for other platforms. The real PTY restoration
-smoke is Linux-only, while other platforms compile and run the deterministic
-runtime tests.
+GitHub Actions is configured to test Nim 2.0.x and current stable Nim on Linux,
+macOS, and Windows. Stable Linux additionally runs the complete suite with ARC
+and ORC. Local evidence currently covers Linux; hosted jobs remain the source of
+truth for other platforms. The real PTY restoration smoke is Linux-only, while
+other platforms run the deterministic runtime tests.
 
 ## Requirements
 
@@ -55,6 +54,7 @@ TerminalDeck
   - [Interactive runtime](#interactive-runtime)
   - [Input and output events](#input-and-output-events)
 - [Examples](#examples)
+- [Guides](#guides)
 - [Development and documentation](#development-and-documentation)
 - [Attribution and license](#attribution-and-license)
 
@@ -77,40 +77,23 @@ module. It does not import session or platform code.
 
 ## Quick start
 
-Create retained controls, update them through validated setters, and compose
-their stable references into a tree:
+Create a retained control, lay it out, dispatch normalized input, and render a
+pure frame:
 
 ```nim
-import std/options
 import terminal_widgets
 
-let notifications = newCheckbox(
-  newWidgetId("notifications"),
-  "Send notifications"
-)
-notifications.setChecked(true)
-
-let density = newRadioGroup(
-  newWidgetId("density"),
-  [
-    newChoiceItem(newItemId("comfortable"), "Comfortable"),
-    newChoiceItem(newItemId("compact"), "Compact")
-  ],
-  selected = some(newItemId("comfortable"))
-)
-
-let root = newColumn(newWidgetId("preferences"),
-  [Widget(notifications), Widget(density)])
-let tree = newWidgetTree(root)
-
-echo tree.root.id
-echo notifications.checked
+let control = newCheckbox(newWidgetId("updates"), "Install updates")
+let tree = newWidgetTree(control)
+discard tree.layout(newSize(24, 1))
+discard tree.dispatch(keyInput(keySpace))
+echo tree.render(newSize(24, 1), plainWidgetTheme()).rows[0]
 ```
 
 Run the complete example with:
 
 ```sh
-nim r --path:src examples/core_model.nim
+nim r --path:src examples/checkbox.nim
 ```
 
 ## API overview
@@ -233,7 +216,7 @@ containers may replace their children atomically with `setChildren`; duplicate
 references, duplicate widget IDs, cycles, and already-owned widgets are rejected
 without changing the container. `newWidgetTree` validates the complete graph and
 takes exclusive ownership. Tree-managed structural mutation, allocation, and
-focus handling are part of the next implementation categories.
+focus handling preserve retained values and repair invalid focus.
 
 ### Input and output events
 
@@ -252,7 +235,7 @@ available from the facade. `WidgetEvent` is a tagged object with a source
 | `focusChanged` | Previous and new optional `WidgetId` values |
 
 `DispatchResult` carries `handled`, `needsRender`, and an ordered event sequence.
-Actual routing and event emission are introduced with focus and control behavior.
+Routing and controls return these events directly to the application or runtime.
 
 ### Layout and focus routing
 
@@ -266,8 +249,8 @@ Each tree owns an independent depth-first focus order. Eligible controls must be
 effectively visible, enabled, and allocated nonzero space. `requestFocus` rejects
 ineligible IDs atomically. `dispatch` handles Tab and Backtab with wrapping,
 routes other normalized input to the focused widget, and bubbles unhandled input
-through its ancestors. Concrete control key behavior is introduced in the
-control-specific phases.
+through its ancestors. Fixed per-control key bindings are listed in the
+[behavior guide](docs/behavior.md#fixed-key-bindings).
 
 Use `detach(tree, id)` to remove a non-root subtree and release its tree
 ownership, `attach(tree, parentId, widget)` to add a validated detached subtree,
@@ -362,8 +345,19 @@ nim c --path:src examples/interactive_form.nim
 
 The repository includes these runnable examples:
 
+- [`examples/checkbox.nim`](examples/checkbox.nim),
+  [`examples/switch.nim`](examples/switch.nim), and
+  [`examples/radio_group.nim`](examples/radio_group.nim) demonstrate the Boolean
+  and exclusive-choice controls.
+- [`examples/scroll_list.nim`](examples/scroll_list.nim) and
+  [`examples/menu.nim`](examples/menu.nim) demonstrate keyed navigation and the
+  menu's explicit activation event.
+- [`examples/tabs.nim`](examples/tabs.nim) demonstrates active-page layout and
+  [`examples/text_field.nim`](examples/text_field.nim) demonstrates editing.
 - [`examples/headless_form.nim`](examples/headless_form.nim) runs the finite
   mixed-widget form used by compatibility checks without requiring a TTY.
+- [`examples/form.nim`](examples/form.nim) is the guarded interactive form;
+  Enter submits and exits, Escape exits, and Ctrl+C cancels.
 - [`examples/core_model.nim`](examples/core_model.nim) constructs and updates a
   retained preferences tree using only the facade.
 - [`examples/composition_focus.nim`](examples/composition_focus.nim) demonstrates
@@ -395,6 +389,15 @@ The repository includes these runnable examples:
 Most examples are side-effect-free. The interactive form opts into a real
 terminal session; its finite deterministic counterpart produces the checked-in
 animation above.
+
+## Guides
+
+- [`docs/api.md`](docs/api.md) maps public types, constructors, state, composition,
+  rendering, runtime entry points, and their standalone examples.
+- [`docs/behavior.md`](docs/behavior.md) defines key bindings, state ownership,
+  Unicode boundaries, themes, validation, and error behavior.
+- [`docs/runtime.md`](docs/runtime.md) defines owned/borrowed sessions, cleanup,
+  termination, failures, and single-owner companion-output composition.
 
 ## Development and documentation
 
