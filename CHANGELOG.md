@@ -15,6 +15,9 @@ All notable changes to TerminalWidgets are documented in this file.
 - Added absolute-position frame presentation without trailing newlines, a
   compile-checked interactive form, deterministic backend tests, and generated
   runtime API documentation.
+- Added exhaustive lifecycle failure injection, redirected-stream rejection, a
+  real Linux PTY restoration smoke test, platform-scope evidence, and a checked-in
+  reproducible asciicast/animated GIF of the finite runtime demo.
 
 ### Rendering and themes
 

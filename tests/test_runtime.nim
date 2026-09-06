@@ -9,38 +9,51 @@ type ScriptedBackend = ref object of RuntimeBackend
   nextEvent: int
   size: Option[TerminalSize]
   frames: seq[Frame]
+  failures: seq[string]
+  presentCalls: int
+  failPresentAt: int
+  nonInteractive: bool
+
+proc step(backend: ScriptedBackend; operation: string) =
+  backend.operations.add operation
+  if operation in backend.failures:
+    raise newException(TerminalIOError, "injected " & operation)
 
 proc interactiveCapabilities(): TerminalCapabilities =
   TerminalCapabilities(inputIsTerminal: true, outputIsTerminal: true,
     supportsAnsi: true, supportsRawMode: true, supportsResizeEvents: true)
 
-method openOwned(backend: ScriptedBackend) = backend.operations.add "open"
+method openOwned(backend: ScriptedBackend) = backend.step("open")
 method capabilities(backend: ScriptedBackend): TerminalCapabilities =
-  backend.operations.add "capabilities"
-  interactiveCapabilities()
+  backend.step("capabilities")
+  if backend.nonInteractive: TerminalCapabilities()
+  else: interactiveCapabilities()
 method initialSize(backend: ScriptedBackend): Option[TerminalSize] =
-  backend.operations.add "size"
+  backend.step("size")
   backend.size
 method enterAlternateScreen(backend: ScriptedBackend) =
-  backend.operations.add "enter-screen"
-method hideCursor(backend: ScriptedBackend) = backend.operations.add "hide-cursor"
+  backend.step("enter-screen")
+method hideCursor(backend: ScriptedBackend) = backend.step("hide-cursor")
 method disableAutoWrap(backend: ScriptedBackend) =
-  backend.operations.add "disable-wrap"
+  backend.step("disable-wrap")
 method present(backend: ScriptedBackend; frame: Frame; ownsCursor: bool) =
-  backend.operations.add "present:" & $ownsCursor
+  backend.step("present:" & $ownsCursor)
+  inc backend.presentCalls
+  if backend.failPresentAt == backend.presentCalls:
+    raise newException(TerminalIOError, "injected present #" & $backend.presentCalls)
   backend.frames.add frame
 method readInput(backend: ScriptedBackend; timeoutMs: int): InputEvent =
-  backend.operations.add "read:" & $timeoutMs
+  backend.step("read:" & $timeoutMs)
   if backend.nextEvent >= backend.events.len: return endOfInput()
   result = backend.events[backend.nextEvent]
   inc backend.nextEvent
-method resetStyles(backend: ScriptedBackend) = backend.operations.add "reset"
+method resetStyles(backend: ScriptedBackend) = backend.step("reset")
 method enableAutoWrap(backend: ScriptedBackend) =
-  backend.operations.add "enable-wrap"
-method showCursor(backend: ScriptedBackend) = backend.operations.add "show-cursor"
+  backend.step("enable-wrap")
+method showCursor(backend: ScriptedBackend) = backend.step("show-cursor")
 method leaveAlternateScreen(backend: ScriptedBackend) =
-  backend.operations.add "leave-screen"
-method closeOwned(backend: ScriptedBackend) = backend.operations.add "close"
+  backend.step("leave-screen")
+method closeOwned(backend: ScriptedBackend) = backend.step("close")
 
 proc scripted(events: openArray[InputEvent];
               size = some(terminalSize(20, 2))): ScriptedBackend =
@@ -135,3 +148,102 @@ suite "runtime lifecycle and event loop":
     options.pollTimeoutMs = 0
     expect ValueError:
       discard runWidgetsWithBackend(tree, scripted([endOfInput()]), options)
+
+  test "unsupported redirected capabilities close before emitting ANSI":
+    let backend = scripted([endOfInput()])
+    backend.nonInteractive = true
+    let tree = newWidgetTree(newCheckbox(newWidgetId("unsupported"), "No TTY"))
+    expect TerminalUnavailableError:
+      discard runWidgetsWithBackend(tree, backend)
+    check backend.operations == @["open", "capabilities", "close"]
+    check backend.frames.len == 0
+
+  test "partial mode and first-presentation failures restore acquired stages":
+    for failed in ["enter-screen", "hide-cursor", "disable-wrap", "present:true"]:
+      let backend = scripted([endOfInput()])
+      backend.failures = @[failed]
+      let tree = newWidgetTree(newCheckbox(newWidgetId("partial-" & failed),
+        "Partial"))
+      expect TerminalIOError:
+        discard runWidgetsWithBackend(tree, backend)
+      check backend.operations[^1] == "close"
+      check "leave-screen" in backend.operations
+      if failed in ["hide-cursor", "disable-wrap", "present:true"]:
+        check "show-cursor" in backend.operations
+      if failed in ["disable-wrap", "present:true"]:
+        check "enable-wrap" in backend.operations
+
+  test "open read callback validator and redraw failures all clean up":
+    block openFailure:
+      let backend = scripted([endOfInput()])
+      backend.failures = @["open"]
+      let tree = newWidgetTree(newCheckbox(newWidgetId("open-fail"), "Open"))
+      expect TerminalIOError:
+        discard runWidgetsWithBackend(tree, backend)
+      check backend.operations == @["open"]
+
+    block readFailure:
+      let backend = scripted([endOfInput()])
+      backend.failures = @["read:50"]
+      let tree = newWidgetTree(newCheckbox(newWidgetId("read-fail"), "Read"))
+      expect TerminalIOError:
+        discard runWidgetsWithBackend(tree, backend)
+      check backend.operations[^1] == "close"
+
+    block callbackFailure:
+      let backend = scripted([keyInput(keyUnknown)])
+      let tree = newWidgetTree(newCheckbox(newWidgetId("callback-fail"),
+        "Callback"))
+      expect ValueError:
+        discard runWidgetsWithBackend(tree, backend,
+          onEvents = proc(context: RuntimeEventContext): RunAction =
+            raise newException(ValueError, "callback failed"))
+      check backend.operations[^1] == "close"
+
+    block validatorFailure:
+      let backend = scripted([keyInput(keyEnter)])
+      let field = newTextField(newWidgetId("validator-fail"),
+        validator = proc(value: string): Option[string] =
+          raise newException(ValueError, "validator failed"))
+      let tree = newWidgetTree(field)
+      expect ValueError:
+        discard runWidgetsWithBackend(tree, backend)
+      check backend.operations[^1] == "close"
+
+    block redrawFailure:
+      let backend = scripted([keyInput(keySpace)])
+      backend.failPresentAt = 2
+      let tree = newWidgetTree(newCheckbox(newWidgetId("redraw-fail"),
+        "Redraw"))
+      expect TerminalIOError:
+        discard runWidgetsWithBackend(tree, backend)
+      check backend.presentCalls == 2
+      check backend.operations[^1] == "close"
+
+  test "cleanup attempts every stage and preserves the primary exception":
+    let cleanupBackend = scripted([endOfInput()])
+    cleanupBackend.failures = @[
+      "reset", "enable-wrap", "show-cursor", "leave-screen", "close"]
+    let cleanupTree = newWidgetTree(newCheckbox(newWidgetId("cleanup"),
+      "Cleanup"))
+    expect TerminalStateError:
+      discard runWidgetsWithBackend(cleanupTree, cleanupBackend)
+    for operation in ["reset", "enable-wrap", "show-cursor", "leave-screen",
+        "close"]:
+      check operation in cleanupBackend.operations
+
+    let primaryBackend = scripted([keyInput(keyUnknown)])
+    primaryBackend.failures = @["show-cursor"]
+    let primaryTree = newWidgetTree(newCheckbox(newWidgetId("primary"),
+      "Primary"))
+    var message = ""
+    try:
+      discard runWidgetsWithBackend(primaryTree, primaryBackend,
+        onEvents = proc(context: RuntimeEventContext): RunAction =
+          raise newException(ValueError, "original failure"))
+    except ValueError as error:
+      message = error.msg
+    check message.startsWith("original failure")
+    check "cleanup failures" in message
+    check "leave-screen" in primaryBackend.operations
+    check primaryBackend.operations[^1] == "close"

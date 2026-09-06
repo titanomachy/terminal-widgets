@@ -334,6 +334,11 @@ leaves screen, cursor, and autowrap ownership with the caller; opt into
 visible cursor, and enabled autowrap. Uncatchable process termination remains
 outside the cleanup guarantee.
 
+![TerminalWidgets interactive form](docs/images/interactive-form.gif)
+
+The animation’s reproducible source is
+[`docs/recordings/interactive_form.cast`](docs/recordings/interactive_form.cast).
+
 ```nim
 import terminal_widgets/runtime
 
@@ -378,12 +383,14 @@ The repository includes these runnable examples:
   graph-like string output in a frame without adding a companion dependency.
 - [`examples/interactive_form.nim`](examples/interactive_form.nim) runs a small
   validated form through the owned TerminalScreen lifecycle in a real terminal.
+- [`examples/runtime_demo.nim`](examples/runtime_demo.nim) is the finite injected
+  runtime sequence used to regenerate the README animation deterministically.
 - [`examples/package_import.nim`](examples/package_import.nim) verifies that a
   facade import does not initialize a terminal session.
 
-Examples currently exercise a side-effect-free model and pure frame data; they
-do not run a visual terminal session, so no terminal screenshot or animated
-recording is applicable yet.
+Most examples are side-effect-free. The interactive form opts into a real
+terminal session; its finite deterministic counterpart produces the checked-in
+animation above.
 
 ## Development and documentation
 
