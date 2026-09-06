@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  compatibility:
+    name: ${{ matrix.os }} / Nim ${{ matrix.nim }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        nim: ["2.0.x", stable]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Nim
+        uses: jiro4989/setup-nim-action@v2
+        with:
+          nim-version: ${{ matrix.nim }}
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Record exact tool versions
+        run: |
+          nim --version
+          nimble --version
+      - name: Install dependencies
+        run: nimble install -y --depsOnly
+      - name: Run release checks
+        run: nimble releaseCheck -y
+
+  memory-manager:
+    name: Linux stable / ${{ matrix.mm }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        mm: [Arc, Orc]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install stable Nim
+        uses: jiro4989/setup-nim-action@v2
+        with:
+          nim-version: stable
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Record exact tool versions
+        run: |
+          nim --version
+          nimble --version
+      - name: Install dependencies
+        run: nimble install -y --depsOnly
+      - name: Run ${{ matrix.mm }} tests
+        run: nimble test${{ matrix.mm }} -y

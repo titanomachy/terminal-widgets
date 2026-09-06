@@ -4,6 +4,16 @@ All notable changes to TerminalWidgets are documented in this file.
 
 ## Unreleased
 
+### Compatibility verification
+
+- Added a Nim 2.0.x/current-stable GitHub Actions matrix for Linux, macOS, and
+  Windows, plus explicit stable-Linux ARC and ORC test jobs with exact tool
+  version output.
+- Added mixed-widget scripted integration coverage and a deterministic headless
+  form exercised by the release checks.
+- Added automated isolated package installation, facade/runtime consumer
+  compilation, installed-content inspection, and source-tree containment checks.
+
 ### Interactive runtime
 
 - Added an injected full-frame event loop with positive bounded polling, fallback

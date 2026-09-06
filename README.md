@@ -5,15 +5,17 @@ switches, tabs, checkboxes, menus, text fields, scrollable lists, and keyboard
 focus handling. Applications own widget references and receive typed events;
 importing `terminal_widgets` performs no terminal I/O.
 
-The public model, layout, keyboard dispatch, single-line text editing, and pure
-full-frame rendering are available now. The opt-in interactive runtime remains
-a later phase recorded in [`implementation guide`](implementation guide).
+The public model, layout, keyboard dispatch, single-line text editing, pure
+full-frame rendering, and opt-in guarded runtime are available now.
 
 ## Platform support
 
-The package and its side-effect-free model tests have been verified on Linux
-with Nim 2.0.x and current stable Nim. Windows and macOS verification is planned
-before release. Terminal-specific support will be documented with the runtime.
+The package is tested by a GitHub Actions matrix using Nim 2.0.x and current
+stable Nim on Linux, macOS, and Windows. Stable Linux additionally runs the
+complete suite with ARC and ORC. Local evidence currently covers Linux; matrix
+jobs remain the source of truth for other platforms. The real PTY restoration
+smoke is Linux-only, while other platforms compile and run the deterministic
+runtime tests.
 
 ## Requirements
 
@@ -360,6 +362,8 @@ nim c --path:src examples/interactive_form.nim
 
 The repository includes these runnable examples:
 
+- [`examples/headless_form.nim`](examples/headless_form.nim) runs the finite
+  mixed-widget form used by compatibility checks without requiring a TTY.
 - [`examples/core_model.nim`](examples/core_model.nim) constructs and updates a
   retained preferences tree using only the facade.
 - [`examples/composition_focus.nim`](examples/composition_focus.nim) demonstrates
@@ -411,7 +415,11 @@ Run all package checks with:
 nimble check
 nimble compilePackage
 nimble test
+nimble testArc
+nimble testOrc
+nimble packageTest
 nimble examples
+nimble headlessExample
 nimble docs
 nimble releaseCheck
 ```

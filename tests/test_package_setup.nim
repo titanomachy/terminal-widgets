@@ -6,6 +6,7 @@ import support/package_layout
 
 const repositoryRoot = currentSourcePath().parentDir().parentDir()
 const manifest = staticRead(repositoryRoot / "terminal_widgets.nimble")
+const workflow = staticRead(repositoryRoot / ".github" / "workflows" / "ci.yml")
 
 suite "package setup":
   test "public facade imports without initialization":
@@ -27,3 +28,13 @@ suite "package setup":
   test "test and example entry-point directories exist":
     check dirExists(repositoryRoot / "tests" / "support")
     check dirExists(repositoryRoot / "examples")
+
+  test "compatibility workflow covers compilers platforms and memory managers":
+    check "os: [ubuntu-latest, macos-latest, windows-latest]" in workflow
+    check "nim: [\"2.0.x\", stable]" in workflow
+    check "nim-version: ${{ matrix.nim }}" in workflow
+    check "mm: [Arc, Orc]" in workflow
+    check "nimble releaseCheck -y" in workflow
+    check "task testArc" in manifest
+    check "task testOrc" in manifest
+    check "task packageTest" in manifest
