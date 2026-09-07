@@ -32,6 +32,11 @@ proc run(command: string; workingDirectory = repositoryRoot) =
 
 proc executable(path: string): string = path & ExeExt
 
+proc compilerOutputExists(path: string): bool =
+  ## Nim 2.0 on Windows preserves an extensionless `--out` value, while newer
+  ## compilers append ExeExt. Both names are valid compiler products.
+  fileExists(path) or fileExists(executable(path))
+
 suite "build containment":
   test "root configuration declares checkout-local output and versioned caches":
     const configuration = staticRead(repositoryRoot / "config.nims")
@@ -49,12 +54,12 @@ suite "build containment":
     run("nim c -r --path:src " & quoteShell(packageTest))
     run("nim r --path:src " & quoteShell(example))
     run("nim c --path:../src package_import.nim", repositoryRoot / "examples")
-    run("nim doc --skipParentCfg:on --project --index:on" &
+    run("nim doc --skipParentCfg:on --skipProjCfg:on --project --index:on" &
       " --outdir:build/docs --nimcache:build/nimcache/docs" &
       " --path:src src/terminal_widgets.nim")
 
-    check fileExists(executable(repositoryRoot / "build" / "bin" / "package_import"))
-    check fileExists(executable(repositoryRoot / "build" / "bin" / "test_package_setup"))
+    check compilerOutputExists(repositoryRoot / "build" / "bin" / "package_import")
+    check compilerOutputExists(repositoryRoot / "build" / "bin" / "test_package_setup")
     check dirExists(repositoryRoot / "build" / "nimcache" /
       ("nim-" & NimVersion) / "package_import")
     check fileExists(repositoryRoot / "build" / "docs" / "terminal_widgets.html")
@@ -76,6 +81,6 @@ suite "build containment":
     run("nim c --out:" & quoteShell(output) & " --nimcache:" & quoteShell(cache) &
       " " & quoteShell(fixture))
 
-    check fileExists(executable(output))
+    check compilerOutputExists(output)
     check dirExists(cache)
     check repositorySnapshot() == before
