@@ -443,7 +443,9 @@ Command-line `--out` and `--nimcache` overrides take precedence over
 The candidate’s compatibility evidence and exact reproduction commands are in
 release records. See
 [`RELEASE_NOTES.md`](RELEASE_NOTES.md) for the 0.1.0 highlights and known limits.
-Tagging and package publication remain explicit repository-owner actions.
+The final engineering assessment and tracked findings are in
+the final engineering assessment. Tagging and package publication
+remain explicit repository-owner actions.
 
 ## Attribution and license
 

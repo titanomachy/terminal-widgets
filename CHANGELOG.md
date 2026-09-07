@@ -12,6 +12,8 @@ All notable changes to TerminalWidgets are documented in this file.
   dependencies even when the caller uses a separate `NIMBLE_DIR`.
 - Added exact local release-check evidence and kept tagging and publication as
   repository-owner actions.
+- Added a specification-based final code review with severity-ranked findings,
+  reproduction evidence, quality feedback, and concrete closure checks.
 
 ### Documentation and examples
 
