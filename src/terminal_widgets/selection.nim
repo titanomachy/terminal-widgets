@@ -65,18 +65,21 @@ proc initSelectionModel*(items: openArray[ChoiceItem]): SelectionModel =
 proc active*(model: SelectionModel): Option[ItemId] = model.activeValue
 proc topIndex*(model: SelectionModel): int = model.topValue
 
-proc clampViewport(model: var SelectionModel; items: openArray[ChoiceItem];
-                   viewportHeight: int) =
+proc clampViewport*(model: var SelectionModel; items: openArray[ChoiceItem];
+                    viewportHeight: int): bool =
+  ## Clamps derived viewport state after allocation changes.
+  let previous = model.topValue
   if viewportHeight <= 0 or items.len == 0:
     model.topValue = 0
-    return
-  model.topValue = min(model.topValue, max(0, items.len - viewportHeight))
-  if model.activeValue.isSome:
-    let index = items.itemIndex(model.activeValue.get)
-    if index >= 0:
-      if index < model.topValue: model.topValue = index
-      elif index - model.topValue >= viewportHeight:
-        model.topValue = index - viewportHeight + 1
+  else:
+    model.topValue = min(model.topValue, max(0, items.len - viewportHeight))
+    if model.activeValue.isSome:
+      let index = items.itemIndex(model.activeValue.get)
+      if index >= 0:
+        if index < model.topValue: model.topValue = index
+        elif index - model.topValue >= viewportHeight:
+          model.topValue = index - viewportHeight + 1
+  model.topValue != previous
 
 proc setActive*(model: var SelectionModel; items: openArray[ChoiceItem];
                 value: Option[ItemId]; viewportHeight: int): bool =
@@ -84,7 +87,7 @@ proc setActive*(model: var SelectionModel; items: openArray[ChoiceItem];
     raise newException(ValueError, "active item must exist and be enabled")
   if model.activeValue != value:
     model.activeValue = value
-    model.clampViewport(items, viewportHeight)
+    discard model.clampViewport(items, viewportHeight)
     return true
 
 proc replacement(items, oldItems: openArray[ChoiceItem];
@@ -109,7 +112,7 @@ proc replace*(model: var SelectionModel; oldItems, items: openArray[ChoiceItem];
   result = model.activeValue != next
   model.activeValue = next
   let previousTop = model.topValue
-  model.clampViewport(items, viewportHeight)
+  discard model.clampViewport(items, viewportHeight)
   result = result or model.topValue != previousTop
 
 proc navigate*(model: var SelectionModel; items: openArray[ChoiceItem]; key: Key;

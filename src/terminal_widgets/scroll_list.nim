@@ -49,6 +49,9 @@ proc setItems*(list: ScrollList; items: openArray[ChoiceItem]) =
 
 method canFocus*(list: ScrollList): bool = list.itemsValue.hasEnabled
 
+method afterAllocation*(list: ScrollList) =
+  discard list.modelValue.clampViewport(list.itemsValue, list.viewportHeight)
+
 method handleInput*(list: ScrollList; input: InputEvent): DispatchResult =
   if input.kind != eventKey or input.keyEvent.key notin {
       keyArrowUp, keyArrowDown, keyHome, keyEnd, keyPageUp, keyPageDown}:

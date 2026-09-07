@@ -140,8 +140,10 @@ Control-specific state currently includes:
 Checkboxes and switches toggle on Space or Enter and expose stable plain markers
 (`[ ]`/`[x]` and `[off]`/`[on]`). Radio groups keep an `active` navigation item
 separate from the optional `selected` value: Up/Down and Home/End move across
-enabled choices, while Space or Enter selects the active choice. User value
-transitions return exactly one typed event; programmatic setters return none.
+enabled choices, while Space or Enter selects the active choice. Long radio
+groups expose `topIndex` and `visibleItems`, keep the active row inside their
+allocated viewport, and render only that visible slice. User value transitions
+return exactly one typed event; programmatic setters return none.
 `renderControl` produces deterministic semantic lines for these controls with
 either `plainWidgetTheme()` or styled `defaultWidgetTheme()` output. `render`
 composes those controls into a clipped full-tree frame.
@@ -153,7 +155,8 @@ changes `active`, while only Enter emits an `activated` menu event. `setItems`
 preserves enabled IDs across reorder/rename and otherwise chooses the specified
 forward-then-backward fallback. Application payloads remain in maps keyed by
 `ItemId`.
-`visibleItems` and `renderControl` inspect only the allocated slice. For
+Radio groups, lists, and menus expose `visibleItems`, and their allocated
+`renderControl` paths inspect only that slice. For
 performance verification, the `RenderMetrics.visitedItems` overload reports the
 number of rows visited; rendering five rows from a 100,000-item fixture visits
 exactly five items. Replacement remains O(n), while steady rendering is
@@ -165,8 +168,8 @@ layout and depth-first focus traversal. Header scrolling is measured in display
 cells and keeps the active header start visible when a single label is wider
 than the viewport. `renderControl` returns the clipped one-row semantic header;
 plain output uses brackets for the active page and parentheses for disabled
-pages. Inactive page widgets keep editor values, selections, and scroll offsets
-across tab changes.
+pages. Space and Enter remain unhandled for application callbacks. Inactive page
+widgets keep editor values, selections, and scroll offsets across tab changes.
 
 ### Text editing
 
@@ -193,9 +196,11 @@ widget tree while dispatch is in progress. A later successful edit or setter
 clears the old error. The placeholder is shown only while the value is empty and
 is never submitted.
 
-After layout, `contentWidth` reserves marker/label cells. `horizontalOffset`
-scrolls in terminal cells just enough to keep the cursor visible, leaving one
-blank caret cell at End when possible. `cursorCell` is an optional frame-local
+After layout, `contentWidth` reserves marker and sanitized-label cells.
+`contentStartCells`, `contentWidth`, `horizontalOffset`, and `cursorCell` accept
+an optional theme so custom marker widths match rendered geometry; omitting it
+uses the default theme. Horizontal scrolling keeps the cursor visible and leaves
+one blank caret cell at End when possible. `cursorCell` is an optional frame-local
 zero-based column and is absent when the field has no visible content cell.
 `visibleText(width)` uses TerminalStyle's cell-aware clipping and never splits a
 wide glyph. The public `editingBoundaries` helper documents the deliberately

@@ -1,4 +1,4 @@
-## Persistent switch state. Keyboard behavior is added in Phase 03.
+## Persistent switch state and keyboard activation behavior.
 
 import terminal_widgets/[types, widget]
 

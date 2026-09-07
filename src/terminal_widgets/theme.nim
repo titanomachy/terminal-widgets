@@ -1,6 +1,7 @@
 ## Semantic widget theme definitions.
 
 import terminal_style
+import terminal_widgets/text_policy
 
 type WidgetTheme* = object
   ## Semantic styles and markers used by deterministic widget presentation.
@@ -66,3 +67,18 @@ proc unicodeWidgetTheme*(useColor = true): WidgetTheme =
   result.radioOnMarker = "◉"
   result.scrollUpMarker = "▲"
   result.scrollDownMarker = "▼"
+
+proc isValidMarker(value: string): bool =
+  value.len > 0 and sanitizePlainText(value) == value and
+    displayWidth(value) > 0
+
+proc validateTheme*(theme: WidgetTheme) =
+  ## Rejects unsafe or zero-cell markers before geometry or rendering uses them.
+  for marker in [theme.focusMarker, theme.disabledMarker,
+      theme.checkboxOffMarker,
+      theme.checkboxOnMarker, theme.switchOffMarker, theme.switchOnMarker,
+      theme.radioOffMarker, theme.radioOnMarker, theme.scrollUpMarker,
+      theme.scrollDownMarker]:
+    if not marker.isValidMarker:
+      raise newException(ValueError,
+        "theme markers must be printable single-line positive-width text")

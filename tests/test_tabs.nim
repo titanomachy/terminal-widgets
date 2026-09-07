@@ -28,8 +28,8 @@ suite "tabs composition":
     check tree.focusOrder == @[tabs.id, logs.id]
     check profile.allocation.isNone
     check logs.allocation == some(newRect(0, 1, 20, 3))
-    check tree.dispatch(keyInput(keyEnter)).handled
-    check tree.dispatch(keyInput(keySpace)).handled
+    check not tree.dispatch(keyInput(keyEnter)).handled
+    check not tree.dispatch(keyInput(keySpace)).handled
 
   test "page values and scroll offsets survive tab round trips":
     let field = newTextField(newWidgetId("field"), value = "kept")

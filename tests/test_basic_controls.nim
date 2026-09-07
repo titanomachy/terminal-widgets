@@ -1,4 +1,4 @@
-import std/[options, unittest]
+import std/[options, sequtils, unittest]
 import terminal_widgets
 
 suite "checkbox switch and radio controls":
@@ -113,6 +113,54 @@ suite "checkbox switch and radio controls":
         newChoiceItem(newItemId("same"), "Second")])
     check group.selected == some(newItemId("three"))
     check group.revision == revision
+
+  test "radio viewport follows navigation resize selection and replacement":
+    let group = newRadioGroup(newWidgetId("viewport-radio"), [
+      newChoiceItem(newItemId("zero"), "Zero"),
+      newChoiceItem(newItemId("disabled-one"), "Disabled", enabled = false),
+      newChoiceItem(newItemId("two"), "Two"),
+      newChoiceItem(newItemId("three"), "Three"),
+      newChoiceItem(newItemId("four"), "Four")
+    ])
+    let tree = newWidgetTree(group)
+    discard tree.layout(newSize(20, 2))
+    check group.topIndex == 0
+    discard tree.dispatch(keyInput(keyEnd))
+    check group.active == some(newItemId("four"))
+    check group.topIndex == 3
+    check group.visibleItems.mapIt(it.id) == @[
+      newItemId("three"), newItemId("four")]
+    check tree.render(newSize(20, 2), plainWidgetTheme()).rows == @[
+      "  ( ) Three         ",
+      "> ( ) Four          "]
+
+    discard tree.dispatch(resizeInput(terminalSize(20, 1)))
+    check group.topIndex == 4
+    group.setSelected(some(newItemId("two")))
+    check group.active == some(newItemId("two"))
+    check group.topIndex == 2
+
+    group.setItems([
+      newChoiceItem(newItemId("disabled-zero"), "Disabled", enabled = false),
+      newChoiceItem(newItemId("two"), "Renamed Two")])
+    check group.active == some(newItemId("two"))
+    check group.selected == some(newItemId("two"))
+    check group.topIndex == 1
+
+  test "radio rendering visits only allocated visible rows":
+    var items = newSeqOfCap[ChoiceItem](100_000)
+    for index in 0 ..< 100_000:
+      items.add newChoiceItem(newItemId($index), "Item " & $index)
+    let group = newRadioGroup(newWidgetId("large-radio"), items)
+    let tree = newWidgetTree(group)
+    discard tree.layout(newSize(24, 4))
+    group.setSelected(some(newItemId("99999")))
+    var metrics: RenderMetrics
+    let rows = renderControl(group, plainWidgetTheme(), metrics, focused = true)
+    check rows.len == 4
+    check metrics.visitedItems == 4
+    check group.topIndex == 99_996
+    check rows[^1] == "> (*) Item 99999"
 
   test "plain and styled control frames are deterministic":
     let checkbox = newCheckbox(newWidgetId("accept"), "Accept", checked = true)

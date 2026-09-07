@@ -12,8 +12,9 @@ import terminal_widgets/[checkbox, composition, dispatch, editor, menu,
 
 export checkbox
 export composition except layoutSize, moveFocus, nodeById, parentOf, relayout
-export dispatch, editor, menu, radio_group, render, scroll_list, selection,
-  static_text, switch, text_field, theme, types
+export dispatch, editor, menu, radio_group, render, scroll_list
+export selection except clampViewport
+export static_text, switch, text_field, theme, types
 export tabs except applyTabPages, snapshotTabPages, tabPageChildren,
   validateTabPages
 export widget except afterAllocation, canFocus, childContentBounds, childWidgets,

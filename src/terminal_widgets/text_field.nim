@@ -6,7 +6,7 @@
 
 import std/[options, unicode]
 import terminal_style
-import terminal_widgets/[editor, types, widget]
+import terminal_widgets/[editor, text_policy, theme, types, widget]
 
 const DefaultTextFieldMaxRunes* = 4096
 
@@ -23,7 +23,7 @@ type TextField* = ref object of Widget
   validationErrorValue: Option[string]
 
 proc hasUnsafeScalar(scalar: int): bool {.inline.} =
-  scalar <= 0x1f or scalar == 0x7f or scalar in 0x80 .. 0x9f
+  isControlScalar(scalar)
 
 proc validateFieldText(value: string) =
   if validateUtf8(value) >= 0:
@@ -45,22 +45,21 @@ proc validateMaxRunes(value: int) =
   if value <= 0:
     raise newException(ValueError, "text field maxRunes must be positive")
 
-proc markerCells(field: TextField): int {.inline.} =
-  ## The semantic field renderer reserves one marker and one separator cell.
-  2
-
 proc labelCells(field: TextField): int {.inline.} =
-  if field.label.len == 0: 0 else: displayWidth(field.label) + 2
+  if field.label.len == 0: 0
+  else: displayWidth(sanitizePlainText(field.label)) + 2
 
-proc contentStartCells*(field: TextField): int =
-  ## Number of frame cells reserved before field content.
-  field.markerCells + field.labelCells
+proc contentStartCells*(field: TextField;
+                        theme = defaultWidgetTheme()): int =
+  ## Number of frame cells reserved before content for the selected theme.
+  theme.validateTheme()
+  displayWidth(theme.focusMarker) + 1 + field.labelCells
 
-proc contentWidth*(field: TextField): int =
-  ## Width left for value/placeholder after marker and label cells.
+proc contentWidth*(field: TextField; theme = defaultWidgetTheme()): int =
+  ## Width left after the measured theme marker and sanitized label.
   if field.allocation.isNone:
     return 0
-  max(0, field.allocation.get.width - field.contentStartCells)
+  max(0, field.allocation.get.width - field.contentStartCells(theme))
 
 proc cursorValueCells(field: TextField): int {.inline.} =
   if field.cursorByteValue == 0:
@@ -70,11 +69,9 @@ proc cursorValueCells(field: TextField): int {.inline.} =
 proc totalValueCells(field: TextField): int {.inline.} =
   displayWidth(field.valueText)
 
-proc adjustHorizontalOffset(field: TextField) =
-  let viewport = field.contentWidth
+proc calculatedHorizontalOffset(field: TextField; viewport: int): int =
   if viewport <= 0:
-    field.horizontalOffsetValue = 0
-    return
+    return 0
   let cursorCells = field.cursorValueCells
   let totalCells = field.totalValueCells
   # One extra scroll cell at the end leaves a blank caret cell when content
@@ -85,64 +82,12 @@ proc adjustHorizontalOffset(field: TextField) =
     offset = cursorCells
   elif cursorCells > offset + viewport - 1:
     offset = min(maximum, cursorCells - viewport + 1)
-  field.horizontalOffsetValue = offset
+  offset
 
-proc decodeUtf8(value: string; start: int; scalar, width: var int): bool =
-  ## Small defensive decoder used only while sanitizing validator messages.
-  ## Field values themselves have already passed ``validateUtf8``.
-  if start < 0 or start >= value.len:
-    return false
-  let first = ord(value[start])
-  template continuation(index: int): int = ord(value[index])
-  template validContinuation(index: int): bool =
-    index < value.len and continuation(index) in 0x80 .. 0xbf
-  if first <= 0x7f:
-    scalar = first
-    width = 1
-    return true
-  if first in 0xc2 .. 0xdf and validContinuation(start + 1):
-    scalar = (first and 0x1f) shl 6 or (continuation(start + 1) and 0x3f)
-    width = 2
-    return true
-  if first in 0xe0 .. 0xef and validContinuation(start + 1) and
-      validContinuation(start + 2):
-    let second = continuation(start + 1)
-    if (first == 0xe0 and second < 0xa0) or
-        (first == 0xed and second > 0x9f):
-      return false
-    scalar = (first and 0x0f) shl 12 or
-      (second and 0x3f) shl 6 or (continuation(start + 2) and 0x3f)
-    width = 3
-    return true
-  if first in 0xf0 .. 0xf4 and validContinuation(start + 1) and
-      validContinuation(start + 2) and validContinuation(start + 3):
-    let second = continuation(start + 1)
-    if (first == 0xf0 and second < 0x90) or
-        (first == 0xf4 and second > 0x8f):
-      return false
-    scalar = (first and 0x07) shl 18 or
-      (second and 0x3f) shl 12 or
-      (continuation(start + 2) and 0x3f) shl 6 or
-      (continuation(start + 3) and 0x3f)
-    width = 4
-    return true
-  false
-
-proc sanitizeValidationMessage(value: string): string =
-  ## Keeps validator feedback printable and single-line, replacing malformed
-  ## bytes and terminal/line control characters with safe text.
-  var index = 0
-  while index < value.len:
-    var scalar, width: int
-    if not decodeUtf8(value, index, scalar, width):
-      result.add "\xef\xbf\xbd"
-      inc index
-      continue
-    if hasUnsafeScalar(scalar) or scalar == 0x2028 or scalar == 0x2029:
-      result.add ' '
-    else:
-      result.add value[index ..< index + width]
-    index += width
+proc adjustHorizontalOffset(field: TextField;
+                            theme = defaultWidgetTheme()) =
+  field.horizontalOffsetValue = field.calculatedHorizontalOffset(
+    field.contentWidth(theme))
 
 proc clearValidationError(field: TextField): bool =
   if field.validationErrorValue.isSome:
@@ -175,6 +120,9 @@ proc value*(field: TextField): string = field.valueText
 proc cursorByte*(field: TextField): int = field.cursorByteValue
 proc cursor*(field: TextField): int = field.cursorByteValue
 proc horizontalOffset*(field: TextField): int = field.horizontalOffsetValue
+proc horizontalOffset*(field: TextField; theme: WidgetTheme): int =
+  ## Returns the effective offset for a theme without mutating retained state.
+  field.calculatedHorizontalOffset(field.contentWidth(theme))
 proc viewportOffset*(field: TextField): int = field.horizontalOffsetValue
 proc maxRunes*(field: TextField): int = field.maxRunesValue
 proc placeholder*(field: TextField): string = field.placeholderValue
@@ -183,17 +131,17 @@ proc validator*(field: TextField): TextValidator = field.validatorValue
 proc validationError*(field: TextField): Option[string] =
   field.validationErrorValue
 
-proc cursorCell*(field: TextField): Option[int] =
+proc cursorCell*(field: TextField;
+                 theme = defaultWidgetTheme()): Option[int] =
   ## Returns the frame-local zero-based cursor column when a content cell is
   ## visible. The runtime adds its frame origin when addressing the terminal.
   let bounds = field.allocation
-  let viewport = field.contentWidth
+  let viewport = field.contentWidth(theme)
   if bounds.isNone or bounds.get.width <= 0 or bounds.get.height <= 0 or
       viewport <= 0:
     return none(int)
-  field.adjustHorizontalOffset()
-  let local = field.contentStartCells + field.cursorValueCells -
-    field.horizontalOffsetValue
+  let offset = field.horizontalOffset(theme)
+  let local = field.contentStartCells(theme) + field.cursorValueCells - offset
   if local < 0 or local >= bounds.get.width:
     return none(int)
   some(bounds.get.x + local)
@@ -388,7 +336,7 @@ method handleInput*(field: TextField; input: InputEvent): DispatchResult =
       return
     let validation = field.validatorValue(field.valueText)
     if validation.isSome:
-      let message = sanitizeValidationMessage(validation.get)
+      let message = sanitizePlainText(validation.get)
       field.validationErrorValue = some(message)
       field.touchWidgetState()
       result.needsRender = true

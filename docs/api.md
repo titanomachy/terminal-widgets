@@ -24,7 +24,7 @@ revision counters but do not synthesize user events.
 | --- | --- | --- | --- |
 | Checkbox | `newCheckbox` | `checked` / `setChecked` | Space or Enter toggles |
 | Switch | `newSwitch` | `isOn` / `setOn` | Space or Enter toggles |
-| Radio group | `newRadioGroup` | `active`, `selected` / `setSelected` | Navigate enabled choices; Space/Enter selects |
+| Radio group | `newRadioGroup` | `active`, `selected` / `setSelected`, `topIndex` | Navigate a visible slice; Space/Enter selects |
 | Scroll list | `newScrollList` | `selected` / `setSelected`, `topIndex` | Navigation changes selection |
 | Menu | `newMenu` | `active` / `setActive`, `topIndex` | Navigation changes active item; Enter activates |
 | Tabs | `newTabs` | `active` / `setActive`, `headerOffset` | Horizontal navigation activates a page |
@@ -34,6 +34,11 @@ revision counters but do not synthesize user events.
 Choices and pages use stable `ItemId` keys. Their sequence getters return copied
 storage; page child widgets intentionally retain object identity. Keep business
 payloads in application maps keyed by `ItemId`.
+
+Radio groups, lists, and menus expose `visibleItems` for their allocated viewport
+and render in O(visible rows). Text-field geometry helpers accept an optional
+theme when custom marker widths must match frame cursor placement. Tabs handle
+only their navigation keys; Space and Enter remain available to applications.
 
 Runnable, independently compilable examples are available for
 [checkbox](../examples/checkbox.nim), [switch](../examples/switch.nim),

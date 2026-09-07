@@ -60,6 +60,21 @@ suite "scroll list and menu selection model":
     check list.selected == some(newItemId("fallback"))
     check list.topIndex == 0
 
+  test "list and menu clamp their viewport after shrinking allocation":
+    let list = newScrollList(newWidgetId("resized-list"), choices())
+    let menu = newMenu(newWidgetId("resized-menu"), choices())
+    let root = newRow(newWidgetId("resized-root"),
+      [Widget(list), Widget(menu)])
+    let tree = newWidgetTree(root)
+    discard tree.layout(newSize(20, 4))
+    list.setSelected(some(newItemId("four")))
+    menu.setActive(some(newItemId("four")))
+    check list.topIndex == 1
+    check menu.topIndex == 1
+    discard tree.dispatch(resizeInput(terminalSize(20, 1)))
+    check list.topIndex == 4
+    check menu.topIndex == 4
+
   test "boundaries disabled data empty data and zero height are inert":
     let list = newScrollList(newWidgetId("list"), choices())
     let tree = newWidgetTree(list)

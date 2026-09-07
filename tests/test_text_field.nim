@@ -214,6 +214,24 @@ suite "single-line text fields":
     discard wideTree.dispatch(keyInput(keyEnd))
     check displayWidth(wide.visibleText(wide.contentWidth)) <= wide.contentWidth
 
+  test "cursor geometry matches sanitized labels and measured theme markers":
+    let field = newTextField(newWidgetId("safe-geometry"),
+      label = "\eA\n", value = "xy")
+    let tree = fieldTree(field, width = 12)
+    discard tree.dispatch(keyInput(keyEnd))
+    var theme = plainWidgetTheme()
+    theme.focusMarker = ">>"
+    check field.contentStartCells(theme) == 8
+    check field.contentWidth(theme) == 4
+    check field.horizontalOffset(theme) == 0
+    check field.cursorCell(theme) == some(10)
+    let revision = field.revision
+    let first = tree.render(newSize(12, 1), theme)
+    check first.cursor == some(CursorCell(column: 10, row: 0))
+    check first.rows == @[">>  A : xy  "]
+    check tree.render(newSize(12, 1), theme) == first
+    check field.revision == revision
+
   test "invalid submission and resize preserve focus and clip cursor metadata":
     let field = newTextField(newWidgetId("resized"), value = "界abc",
       validator = proc(value: string): Option[string] = some("not valid"))

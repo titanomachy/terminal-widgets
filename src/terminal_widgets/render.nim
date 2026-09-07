@@ -4,10 +4,11 @@
 ## and never mutates retained widget state. Full-frame presentation is the
 ## correctness baseline; incremental/diff presentation is intentionally absent.
 
-import std/[options, strutils, unicode]
+import std/[options, strutils]
 import terminal_style
 import terminal_widgets/[checkbox, composition, menu, radio_group, scroll_list,
-  selection, static_text, switch, tabs, text_field, theme, types, widget]
+  selection, static_text, switch, tabs, text_field, text_policy, theme, types,
+  widget]
 
 type
   CursorCell* = object
@@ -26,57 +27,8 @@ type
     ## Observable work counters used by rendering performance verification.
     visitedItems*: int
 
-proc decodeUtf8(value: string; start: int; scalar, byteWidth: var int): bool =
-  if start < 0 or start >= value.len: return false
-  let first = ord(value[start])
-  template continuation(index: int): int = ord(value[index])
-  template validContinuation(index: int): bool =
-    index < value.len and continuation(index) in 0x80 .. 0xbf
-  if first <= 0x7f:
-    scalar = first; byteWidth = 1; return true
-  if first in 0xc2 .. 0xdf and validContinuation(start + 1):
-    scalar = (first and 0x1f) shl 6 or (continuation(start + 1) and 0x3f)
-    byteWidth = 2; return true
-  if first in 0xe0 .. 0xef and validContinuation(start + 1) and
-      validContinuation(start + 2):
-    let second = continuation(start + 1)
-    if (first == 0xe0 and second < 0xa0) or
-        (first == 0xed and second > 0x9f): return false
-    scalar = (first and 0x0f) shl 12 or (second and 0x3f) shl 6 or
-      (continuation(start + 2) and 0x3f)
-    byteWidth = 3; return true
-  if first in 0xf0 .. 0xf4 and validContinuation(start + 1) and
-      validContinuation(start + 2) and validContinuation(start + 3):
-    let second = continuation(start + 1)
-    if (first == 0xf0 and second < 0x90) or
-        (first == 0xf4 and second > 0x8f): return false
-    scalar = (first and 0x07) shl 18 or (second and 0x3f) shl 12 or
-      (continuation(start + 2) and 0x3f) shl 6 or
-      (continuation(start + 3) and 0x3f)
-    byteWidth = 4; return true
-
 proc sanitizePlainText*(value: string): string =
-  ## Replaces malformed UTF-8 and unsafe single-line controls with safe text.
-  var index = 0
-  var hasBase = false
-  while index < value.len:
-    var scalar, byteWidth: int
-    if not decodeUtf8(value, index, scalar, byteWidth):
-      result.add "\xef\xbf\xbd"
-      hasBase = true
-      inc index
-      continue
-    if scalar <= 0x1f or scalar == 0x7f or scalar in 0x80 .. 0x9f or
-        scalar in [0x2028, 0x2029]:
-      result.add ' '
-      hasBase = true
-    else:
-      let rune = Rune(scalar)
-      if unicode.isCombining(rune) and not hasBase:
-        result.add "◌"
-      result.add value[index ..< index + byteWidth]
-      if not unicode.isCombining(rune): hasBase = true
-    index += byteWidth
+  text_policy.sanitizePlainText(value)
 
 proc trustedSgr(value: string; useColor: bool): string =
   for token in tokenizeAnsi(value):
@@ -89,22 +41,6 @@ proc trustedSgr(value: string; useColor: bool): string =
     of atkOsc, atkEscape:
       discard
   if useColor and result.contains(ansiEscape): result.add ansiReset
-
-proc isValidMarker(value: string): bool =
-  value.len > 0 and sanitizePlainText(value) == value and
-    not value.contains('\n') and not value.contains('\r') and
-    displayWidth(value) > 0
-
-proc validateTheme*(theme: WidgetTheme) =
-  ## Rejects unsafe or zero-cell markers before any frame is constructed.
-  for marker in [theme.focusMarker, theme.disabledMarker,
-      theme.checkboxOffMarker,
-      theme.checkboxOnMarker, theme.switchOffMarker, theme.switchOnMarker,
-      theme.radioOffMarker, theme.radioOnMarker, theme.scrollUpMarker,
-      theme.scrollDownMarker]:
-    if not marker.isValidMarker:
-      raise newException(ValueError,
-        "theme markers must be printable single-line positive-width text")
 
 proc present(value: string; style: TerminalStyle; theme: WidgetTheme): string =
   applyStyle(value, style, enabled = theme.useColor)
@@ -145,9 +81,14 @@ proc renderControl*(switch: Switch; theme: WidgetTheme;
   @[present(line, style, theme)]
 
 proc renderControl*(group: RadioGroup; theme: WidgetTheme;
-                    focused = false; enabled = true): seq[string] =
+                    metrics: var RenderMetrics; focused = false;
+                    enabled = true): seq[string] =
   theme.validateTheme()
-  for item in group.items:
+  let bounds = group.allocation
+  if bounds.isSome and bounds.get.height == 0: return @[]
+  let items = if bounds.isSome: group.visibleItems else: group.items
+  for item in items:
+    inc metrics.visitedItems
     let selected = group.selected == some(item.id)
     let active = focused and group.active == some(item.id)
     let marker = if selected: theme.radioOnMarker else: theme.radioOffMarker
@@ -159,6 +100,11 @@ proc renderControl*(group: RadioGroup; theme: WidgetTheme;
       elif selected: theme.selected
       else: theme.normal
     result.add present(line, style, theme)
+
+proc renderControl*(group: RadioGroup; theme: WidgetTheme;
+                    focused = false; enabled = true): seq[string] =
+  var metrics: RenderMetrics
+  renderControl(group, theme, metrics, focused, enabled)
 
 proc renderSelection(items: openArray[ChoiceItem]; active: Option[ItemId];
                      theme: WidgetTheme; focused, enabled: bool;
@@ -326,15 +272,8 @@ proc render*(tree: WidgetTree; size: Size; theme: WidgetTheme): Frame =
       let field = TextField(current)
       let lead = prefix(focused, enabled, theme) &
         (if field.label.len > 0: sanitizePlainText(field.label) & ": " else: "")
-      let available = max(0, bounds.width - displayWidth(lead))
-      let cursorCells = displayWidth(field.value[0 ..< field.cursorByte])
-      let totalCells = displayWidth(field.value)
-      let maximum = max(0, totalCells - available + 1)
-      var offset = min(field.horizontalOffset, maximum)
-      if available > 0:
-        if cursorCells < offset: offset = cursorCells
-        elif cursorCells > offset + available - 1:
-          offset = min(maximum, cursorCells - available + 1)
+      let available = field.contentWidth(theme)
+      let offset = field.horizontalOffset(theme)
       let source = if field.value.len == 0: sanitizePlainText(field.placeholder)
                    else: field.value
       let contentStyle =
@@ -350,9 +289,10 @@ proc render*(tree: WidgetTree; size: Size; theme: WidgetTheme): Frame =
         lines.add present(prefix(false, true, theme) &
           sanitizePlainText(field.validationError.get), theme.error, theme)
       if focused and available > 0:
-        let column = bounds.x + displayWidth(lead) + cursorCells - offset
-        if column >= clipped.get.x and column < clipped.get.x + clipped.get.width:
-          frame.cursor = some(CursorCell(column: column, row: bounds.y))
+        let cursor = field.cursorCell(theme)
+        if cursor.isSome and cursor.get >= clipped.get.x and
+            cursor.get < clipped.get.x + clipped.get.width:
+          frame.cursor = some(CursorCell(column: cursor.get, row: bounds.y))
     elif current of StaticText:
       let text = StaticText(current)
       for rawLine in text.content.splitLines:

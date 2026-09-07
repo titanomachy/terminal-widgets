@@ -49,6 +49,9 @@ proc setItems*(menu: Menu; items: openArray[ChoiceItem]) =
 
 method canFocus*(menu: Menu): bool = menu.itemsValue.hasEnabled
 
+method afterAllocation*(menu: Menu) =
+  discard menu.modelValue.clampViewport(menu.itemsValue, menu.viewportHeight)
+
 method handleInput*(menu: Menu; input: InputEvent): DispatchResult =
   if input.kind != eventKey: return
   if input.keyEvent.key in {

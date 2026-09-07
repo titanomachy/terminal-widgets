@@ -79,6 +79,22 @@ suite "runtime lifecycle and event loop":
       "disable-wrap", "present:true", "read:50", "reset", "enable-wrap",
       "show-cursor", "leave-screen", "close"]
 
+  test "tabs deliver documented unhandled activation keys to applications":
+    let backend = scripted([keyInput(keySpace)])
+    let tabs = newTabs(newWidgetId("runtime-tabs"), [
+      newTabPage(newItemId("runtime-page"), "Page",
+        newCheckbox(newWidgetId("runtime-page-child"), "Child"))])
+    let tree = newWidgetTree(tabs)
+    var delivered = false
+    let result = runWidgetsWithBackend(tree, backend,
+      onEvents = proc(context: RuntimeEventContext): RunAction =
+        delivered = true
+        check context.input.keyEvent.key == keySpace
+        check not context.outcome.handled
+        stopRunning)
+    check delivered
+    check result.termination == requestedStop
+
   test "timeouts stay idle while resize and value changes redraw once":
     let backend = scripted([
       timeoutInput(),

@@ -1,4 +1,4 @@
-## Persistent checkbox state. Keyboard behavior is added in Phase 03.
+## Persistent checkbox state and keyboard activation behavior.
 
 import terminal_widgets/[types, widget]
 

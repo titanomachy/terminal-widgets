@@ -2,7 +2,7 @@
 
 import std/[options, sets]
 import terminal_style
-import terminal_widgets/[types, widget]
+import terminal_widgets/[text_policy, types, widget]
 
 type
   TabPage* = object
@@ -178,7 +178,7 @@ method afterAllocation*(tabs: Tabs) =
   var activeStart = 0
   var activeEnd = 0
   for index, page in tabs.pagesValue:
-    let width = displayWidth(" " & page.label & " ")
+    let width = displayWidth(" " & sanitizePlainText(page.label) & " ")
     if page.id == tabs.activeValue.get:
       activeStart = cursor
       activeEnd = cursor + width
@@ -196,9 +196,6 @@ method afterAllocation*(tabs: Tabs) =
 
 method handleInput*(tabs: Tabs; input: InputEvent): DispatchResult =
   if input.kind != eventKey:
-    return
-  if input.keyEvent.key in {keyEnter, keySpace}:
-    result.handled = tabs.activeValue.isSome
     return
   if input.keyEvent.key notin {keyArrowLeft, keyArrowRight, keyHome, keyEnd}:
     return

@@ -17,6 +17,7 @@ const expectedModules* = [
   "text_field.nim",
   "static_text.nim",
   "theme.nim",
+  "text_policy.nim",
   "render.nim",
   "runtime.nim",
   "terminal_screen_adapter.nim"

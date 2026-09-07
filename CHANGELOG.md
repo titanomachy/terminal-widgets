@@ -14,6 +14,8 @@ All notable changes to TerminalWidgets are documented in this file.
   repository-owner actions.
 - Added a specification-based final code review with severity-ranked findings,
   reproduction evidence, quality feedback, and concrete closure checks.
+- Resolved every final-review finding and recorded a release-ready closure
+  verdict after targeted and complete two-compiler verification.
 
 ### Documentation and examples
 
@@ -70,6 +72,8 @@ All notable changes to TerminalWidgets are documented in this file.
 - Added complete plain golden states for every control, one-cell and large resize
   coverage, explicit non-color disabled markers, and a dependency-free static
   companion-output example.
+- Centralized defensive plain-text sanitization and aligned text-field geometry
+  helpers with sanitized labels and custom theme-marker widths.
 
 ### Text fields
 
@@ -96,6 +100,8 @@ All notable changes to TerminalWidgets are documented in this file.
   reorder preservation, positional fallback, ownership updates, and focus repair.
 - Added clipped semantic tab headers plus coverage for empty, all-disabled,
   narrow, removed, reordered, foreign-owned, and nested tab compositions.
+- Corrected Space/Enter dispatch so tabs leave both keys available to application
+  callbacks, matching the documented behavior contract.
 
 ### Lists and menus
 
@@ -118,6 +124,8 @@ All notable changes to TerminalWidgets are documented in this file.
   deterministic plain/styled semantic control frames using TerminalStyle.
 - Covered disabled and empty controls, boundary navigation, repeat activation,
   replacement fallback, and exact plain/ANSI snapshots.
+- Added shared viewport tracking and visible-row rendering to radio groups,
+  including resize, replacement, disabled-gap, and 100,000-item regression cases.
 
 ### Composition and focus
 

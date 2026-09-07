@@ -30,6 +30,11 @@ changes, resize, reordering, and movement of retained widgets. Collection keys,
 not labels or indices, preserve identity. Same-value setters do not increment
 `revision`; setters do not emit user events.
 
+Radio groups, lists, and menus clamp `topIndex` after navigation, selection,
+replacement, and resize so their active row stays in the allocated viewport.
+Their rendering cost is proportional to visible rows; replacement and scans
+through disabled runs remain linear in the affected item range.
+
 A widget can belong to only one tree. Duplicate references, duplicate widget or
 item IDs, cycles, foreign-owned attachments, invalid selections, and invalid
 geometry raise `ValueError` atomically. Detached widgets release tree ownership

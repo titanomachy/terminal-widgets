@@ -1,7 +1,7 @@
 ## Retained container and tree construction with atomic ownership validation.
 ##
-## Layout allocation and tree-managed structural mutation are introduced in
-## Phase 02. Detached containers may replace children before attachment.
+## Layout allocation and tree-managed structural mutation preserve ownership
+## and focus invariants. Detached containers may replace children directly.
 
 import std/[options, sets, tables]
 import terminal_widgets/[focus, tabs, types, widget]
@@ -130,15 +130,15 @@ proc newContainer(id: WidgetId; kind: ContainerKind;
   result.sizingValue = initTable[WidgetId, ChildSizing]()
 
 proc newRow*(id: WidgetId; children: openArray[Widget] = []): Container =
-  ## Constructs a retained row. Allocation is added in Phase 02.
+  ## Constructs a retained row container.
   newContainer(id, rowContainer, children)
 
 proc newColumn*(id: WidgetId; children: openArray[Widget] = []): Container =
-  ## Constructs a retained column. Allocation is added in Phase 02.
+  ## Constructs a retained column container.
   newContainer(id, columnContainer, children)
 
 proc newStack*(id: WidgetId; children: openArray[Widget] = []): Container =
-  ## Constructs a retained stack. Allocation is added in Phase 02.
+  ## Constructs a retained stack container.
   newContainer(id, stackContainer, children)
 
 proc kind*(container: Container): ContainerKind = container.kindValue
@@ -184,8 +184,8 @@ method childWidgets*(container: Container): seq[Widget] =
 proc setChildren*(container: Container; children: openArray[Widget]) =
   ## Atomically replaces children on a detached container.
   ##
-  ## Once attached, use the tree mutation operations introduced in Phase 02 so
-  ## parent ownership and focus repair can be updated together.
+  ## Once attached, use tree mutation operations so parent ownership and focus
+  ## repair can be updated together.
   if container.isNil:
     raise newException(ValueError, "container must not be nil")
   if container.isTreeOwned:

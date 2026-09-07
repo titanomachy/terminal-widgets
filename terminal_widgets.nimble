@@ -15,7 +15,7 @@ requires "terminal_screen >= 0.1.1"
 proc requireSource(path: string) =
   if not fileExists(path):
     raise newException(ValueError,
-      "Implementation pending: " & path & ". See implementation guide.")
+      "Required package source is missing: " & path)
 
 proc sources(directory: string): seq[string] =
   if dirExists(directory):
@@ -25,7 +25,7 @@ proc sources(directory: string): seq[string] =
   result.sort()
   if result.len == 0:
     raise newException(ValueError,
-      "No Nim sources in " & directory & ". See implementation guide.")
+      "No Nim sources found in " & directory)
 
 proc runTests(memoryManager = "") =
   var count = 0
@@ -48,7 +48,7 @@ proc runReleaseStep(command: string) =
   if execution.exitCode != 0:
     raise newException(OSError, "release check failed: " & command)
 
-task compilePackage, "Compile the library once its implementation exists":
+task compilePackage, "Compile the library facade":
   requireSource("src/terminal_widgets.nim")
   exec "nim c --path:src src/terminal_widgets.nim"
 
