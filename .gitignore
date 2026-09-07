@@ -1,4 +1,5 @@
 /build/
+/.nim_runtime/
 RELEASING.md
 nimble.develop
 nimble.paths

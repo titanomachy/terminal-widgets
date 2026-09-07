@@ -7,7 +7,7 @@ type TreeSnapshot = Table[string, string]
 proc recordTree(directory: string; snapshot: var TreeSnapshot) =
   for kind, path in walkDir(directory):
     let relative = relativePath(path, repositoryRoot).replace('\\', '/')
-    if relative == ".git" or relative == "build":
+    if relative == ".git" or relative == "build" or relative == ".nim_runtime":
       continue
     case kind
     of pcDir:
@@ -30,12 +30,12 @@ proc run(command: string; workingDirectory = repositoryRoot) =
     checkpoint command & "\n" & execution.output
   check execution.exitCode == 0
 
-proc executable(path: string): string = path & ExeExt
-
 proc compilerOutputExists(path: string): bool =
-  ## Nim 2.0 on Windows preserves an extensionless `--out` value, while newer
-  ## compilers append ExeExt. Both names are valid compiler products.
-  fileExists(path) or fileExists(executable(path))
+  ## ExeExt omits its leading dot ("exe" on Windows). Nim versions differ in
+  ## whether configured and explicit output names receive that separator.
+  fileExists(path) or
+    fileExists(addFileExt(path, ExeExt)) or
+    (ExeExt.len > 0 and fileExists(path & ExeExt))
 
 suite "build containment":
   test "root configuration declares checkout-local output and versioned caches":
@@ -44,6 +44,8 @@ suite "build containment":
     check "switch(\"outDir\", buildRoot / \"bin\")" in configuration
     check "nim-\" & NimVersion" in configuration
     check "projectName()" in configuration
+    check "projectPath()" in configuration
+    check "dochack.nim" in configuration
 
   test "direct compilation, nested compilation, execution, and docs stay contained":
     let before = repositorySnapshot()
