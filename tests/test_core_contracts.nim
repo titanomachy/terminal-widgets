@@ -73,7 +73,7 @@ suite "core contract verification":
       checkpoint compilation.output
     check compilation.exitCode == 0
 
-    let execution = execCmdEx(quoteShell(output & ExeExt),
+    let execution = execCmdEx(quoteShell(addFileExt(output, ExeExt)),
       workingDir = repositoryRoot,
       options = {poUsePath, poStdErrToStdOut})
     check execution.exitCode == 0
