@@ -44,14 +44,14 @@ proc copyFixture(source, destination: string) =
     of pcLinkToFile, pcLinkToDir:
       raise newException(IOError, "consumer fixture must not contain links")
 
-proc installedPackage(store: string): string =
+proc installedPackage(store, packageName: string): string =
   let packages = store / "pkgs2"
   for kind, path in walkDir(packages):
-    if kind == pcDir and extractFilename(path).startsWith("terminal_widgets-"):
+    if kind == pcDir and extractFilename(path).startsWith(packageName & "-"):
       result = path
       break
   if result.len == 0:
-    raise newException(IOError, "installed TerminalWidgets package not found")
+    raise newException(IOError, "installed package not found: " & packageName)
 
 proc packageFiles(directory: string): seq[string] =
   for path in walkDirRec(directory):
@@ -84,17 +84,24 @@ when isMainModule:
     removeDir(verificationRoot)
   createDir(verificationRoot)
 
-  discard run("nimble install -y --nimbleDir:" & quoteShell(store))
-  verifyInstalledContents(installedPackage(store))
+  # Keep nested Nimble invocations isolated even when the caller already set a
+  # different NIMBLE_DIR for its own release environment. Nimble gives the
+  # inherited environment variable precedence over --nimbleDir.
+  putEnv("NIMBLE_DIR", store)
+
+  discard run("nimble install -y")
+  verifyInstalledContents(installedPackage(store, "terminal_widgets"))
+  doAssert dirExists(installedPackage(store, "terminal_style"))
+  doAssert dirExists(installedPackage(store, "terminal_screen"))
 
   copyFixture(fixtureRoot, consumer)
-  discard run("nimble install -y --nimbleDir:" & quoteShell(store), consumer)
+  discard run("nimble install -y", consumer)
   let consumerBinary = consumer / "build" / "bin" / ("main" & ExeExt)
   let consumerCache = consumer / "build" / "nimcache"
   createDir(consumerBinary.parentDir())
   createDir(consumerCache)
-  discard run("nimble c --skipParentCfg:on --nimbleDir:" & quoteShell(store) &
-    " --out:" & quoteShell(consumerBinary) & " --nimcache:" &
+  discard run("nimble c --skipParentCfg:on --out:" & quoteShell(consumerBinary) &
+    " --nimcache:" &
     quoteShell(consumerCache) & " src/main.nim", consumer)
   let output = run(quoteShell(consumerBinary), consumer)
   doAssert output.strip == "isolated-consumer:ok", "unexpected output: " & output

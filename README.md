@@ -41,6 +41,8 @@ TerminalDeck
     └── TerminalWidgets <- this package
 ```
 
+![Nim terminal ecosystem](docs/images/nim-terminal-ecosystem.svg)
+
 ## Contents
 
 - [Installation](#installation)
@@ -56,6 +58,7 @@ TerminalDeck
 - [Examples](#examples)
 - [Guides](#guides)
 - [Development and documentation](#development-and-documentation)
+- [Release information](#release-information)
 - [Attribution and license](#attribution-and-license)
 
 ## Installation
@@ -435,7 +438,15 @@ are recorded in verification records.
 Command-line `--out` and `--nimcache` overrides take precedence over
 `config.nims`; project automation must keep any such paths below `build/`.
 
+## Release information
+
+The candidate’s compatibility evidence and exact reproduction commands are in
+release records. See
+[`RELEASE_NOTES.md`](RELEASE_NOTES.md) for the 0.1.0 highlights and known limits.
+Tagging and package publication remain explicit repository-owner actions.
+
 ## Attribution and license
 
 Copyright (c) 2026 titanomachy. TerminalWidgets is released under the
-[MIT License](LICENSE).
+[MIT License](LICENSE). The separately distributed MIT-licensed dependencies
+are listed in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).

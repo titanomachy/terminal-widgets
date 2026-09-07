@@ -4,6 +4,15 @@ All notable changes to TerminalWidgets are documented in this file.
 
 ## Unreleased
 
+### Release preparation
+
+- Added 0.1.0 release notes, third-party MIT notices, and automated release
+  metadata checks for dependency floors, package exclusions, and owner handoff.
+- Strengthened the isolated-package audit to verify both resolved runtime
+  dependencies even when the caller uses a separate `NIMBLE_DIR`.
+- Added exact local release-check evidence and kept tagging and publication as
+  repository-owner actions.
+
 ### Documentation and examples
 
 - Added independently compilable checkbox, switch, radio, list, menu, tabs,

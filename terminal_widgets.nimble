@@ -39,6 +39,15 @@ proc runTests(memoryManager = "") =
   if count == 0:
     raise newException(ValueError, "No test_*.nim suites exist yet")
 
+proc runReleaseStep(command: string) =
+  ## Nimble task subprocess failures are checked explicitly so one failed
+  ## release step cannot be hidden by a later successful command.
+  let execution = gorgeEx(command)
+  if execution.output.len > 0:
+    echo execution.output
+  if execution.exitCode != 0:
+    raise newException(OSError, "release check failed: " & command)
+
 task compilePackage, "Compile the library once its implementation exists":
   requireSource("src/terminal_widgets.nim")
   exec "nim c --path:src src/terminal_widgets.nim"
@@ -72,11 +81,11 @@ task docs, "Generate API documentation inside build/docs":
   exec "nim doc --skipParentCfg:on --project --index:on --outdir:build/docs --nimcache:build/nimcache/docs-runtime --path:src src/terminal_widgets/runtime.nim"
 
 task releaseCheck, "Validate the implemented package, tests, examples, and docs":
-  exec "nimble check"
-  exec "nimble compilePackage"
-  exec "nimble test"
-  exec "nimble packageTest"
-  exec "nimble examples"
-  exec "nimble headlessExample"
-  exec "nimble benchmark"
-  exec "nimble docs"
+  runReleaseStep("nimble check")
+  runReleaseStep("nimble compilePackage")
+  runReleaseStep("nimble test")
+  runReleaseStep("nimble packageTest")
+  runReleaseStep("nimble examples")
+  runReleaseStep("nimble headlessExample")
+  runReleaseStep("nimble benchmark")
+  runReleaseStep("nimble docs")
