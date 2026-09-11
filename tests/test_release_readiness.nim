@@ -10,7 +10,7 @@ const changelog = staticRead(repositoryRoot / "CHANGELOG.md")
 
 suite "release readiness metadata":
   test "license and dependency notices are complete":
-    check license.startsWith("MIT License\n")
+    check license.splitLines()[0] == "MIT License"
     check "Copyright (c) 2026 titanomachy" in license
     check "the software is provided \"as is\"" in license.toLowerAscii
     check "TerminalStyle" in notices
