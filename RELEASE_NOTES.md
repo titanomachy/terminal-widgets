@@ -22,8 +22,8 @@ terminal interaction library in TerminalDeck.
 - Requires Nim 2.0.0+, TerminalStyle 0.1.1+, and TerminalScreen 0.1.1+.
 - Local release checks pass on Linux amd64 with Nim 2.0.4 and 2.2.10.
 - Stable Linux ARC and ORC suites pass locally.
-- CI is configured for Nim 2.0.x and stable on Linux, macOS, and Windows. Hosted
-  macOS/Windows results are not claimed by the local evidence.
+- The complete hosted CI matrix passes with Nim 2.0.x and stable on Linux,
+  macOS, and Windows, plus stable-Linux ARC and ORC jobs.
 - The real terminal restoration smoke is Linux-only; non-Linux environments run
   the deterministic injected runtime suite.
 

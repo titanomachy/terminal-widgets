@@ -33,7 +33,8 @@ suite "release readiness metadata":
   test "release notes identify evidence limits and owner handoff":
     check "TerminalWidgets 0.1.0" in releaseNotes
     check "Nim 2.0.4 and 2.2.10" in releaseNotes
-    check "macOS/Windows results are not claimed" in releaseNotes
+    check "complete hosted CI matrix passes" in releaseNotes
+    check "macOS, and Windows" in releaseNotes
     check "repository owner" in releaseNotes
     check "publishing" in releaseNotes
     check "RELEASE_NOTES.md" in readme

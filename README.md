@@ -10,11 +10,10 @@ full-frame rendering, and opt-in guarded runtime are available now.
 
 ## Platform support
 
-GitHub Actions is configured to test Nim 2.0.x and current stable Nim on Linux,
-macOS, and Windows. Stable Linux additionally runs the complete suite with ARC
-and ORC. Local evidence currently covers Linux; hosted jobs remain the source of
-truth for other platforms. The real PTY restoration smoke is Linux-only, while
-other platforms run the deterministic runtime tests.
+The complete GitHub Actions compatibility matrix passes with Nim 2.0.x and
+current stable Nim on Linux, macOS, and Windows. Stable Linux additionally runs
+the complete suite with ARC and ORC. The real PTY restoration smoke is
+Linux-only, while other platforms run the deterministic runtime tests.
 
 ## Requirements
 
