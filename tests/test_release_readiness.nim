@@ -39,5 +39,6 @@ suite "release readiness metadata":
     check "publishing" in releaseNotes
     check "RELEASE_NOTES.md" in readme
     check "THIRD_PARTY_NOTICES.md" in readme
-    check "docs/images/nim-terminal-ecosystem.svg" in readme
+    check "```mermaid" in readme
+    check "Nim Terminal Ecosystem" in readme
     check "### Release preparation" in changelog
