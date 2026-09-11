@@ -50,11 +50,12 @@ TerminalDeck
 - [API overview](#api-overview)
   - [IDs and geometry](#ids-and-geometry)
   - [Retained widget state](#retained-widget-state)
+  - [Text editing](#text-editing)
   - [Keyed controls and composition](#keyed-controls-and-composition)
+  - [Input and output events](#input-and-output-events)
   - [Layout and focus routing](#layout-and-focus-routing)
   - [Frames, themes, and static text](#frames-themes-and-static-text)
   - [Interactive runtime](#interactive-runtime)
-  - [Input and output events](#input-and-output-events)
 - [Examples](#examples)
 - [Guides](#guides)
 - [Development and documentation](#development-and-documentation)
@@ -105,11 +106,12 @@ nim r --path:src examples/checkbox.nim
 | --- | --- | --- |
 | [IDs and geometry](#ids-and-geometry) | `WidgetId`, `ItemId`, `Rect`, `Size` | Validated stable IDs and nonnegative cell geometry |
 | [Retained widget state](#retained-widget-state) | `Widget`, common getters/setters, `revision` | Private mutable state; same-value setters do not revise |
-| [Keyed controls and composition](#keyed-controls-and-composition) | control constructors, `ChoiceItem`, `TabPage`, row/column/stack, `WidgetTree` | Stable application keys, snapshot collections, retained widget identity |
 | [Text editing](#text-editing) | `TextField`, `TextValidator`, `editingBoundaries` | UTF-8 cluster-safe editing, scalar limits, validation, cell viewport |
+| [Keyed controls and composition](#keyed-controls-and-composition) | control constructors, `ChoiceItem`, `TabPage`, row/column/stack, `WidgetTree` | Stable application keys, snapshot collections, retained widget identity |
+| [Input and output events](#input-and-output-events) | `InputEvent`, `WidgetEvent`, `DispatchResult` | Normalized input and ordered typed application output |
+| [Layout and focus routing](#layout-and-focus-routing) | row/column/stack, sizing, `layout`, `requestFocus` | Cell allocation and depth-first focus routing |
 | [Frames and themes](#frames-themes-and-static-text) | `Frame`, `CursorCell`, `WidgetTheme`, `StaticText`, `render` | Pure exact-size compositing, safe clipping, semantic styles, optional cursor |
 | [Interactive runtime](#interactive-runtime) | `runWidgets`, `RuntimeOptions`, `RuntimeEventContext`, `RunResult` | Explicit owned/borrowed TerminalScreen lifecycle and full-frame loop |
-| [Input and output events](#input-and-output-events) | `InputEvent`, `WidgetEvent`, `DispatchResult` | Normalized input and ordered typed application output |
 
 ### IDs and geometry
 
@@ -121,6 +123,18 @@ distinct-type conversion.
 `newRect(x, y, width, height)` accepts zero-based positions and nonnegative
 dimensions, including zero space, and rejects overflowing extents. `newSize`
 likewise accepts nonnegative viewport dimensions.
+
+```nim
+import terminal_widgets
+
+let fieldId = newWidgetId("search")
+let choiceId = newItemId("stable")
+let viewport = newSize(80, 24)
+let bounds = newRect(x = 2, y = 1, width = 30, height = 3)
+```
+
+IDs are stable application keys; rectangles and sizes are terminal-cell
+measurements rather than pixel coordinates.
 
 ### Retained widget state
 
@@ -171,6 +185,30 @@ plain output uses brackets for the active page and parentheses for disabled
 pages. Space and Enter remain unhandled for application callbacks. Inactive page
 widgets keep editor values, selections, and scroll offsets across tab changes.
 
+```nim
+import terminal_widgets
+
+let updates = newCheckbox(newWidgetId("updates"), "Install updates")
+let before = updates.revision
+updates.setChecked(true)
+doAssert updates.checked and updates.revision == before + 1
+
+# Setting the same value is a no-op, including for revision tracking.
+updates.setChecked(true)
+doAssert updates.revision == before + 1
+```
+
+![Checkbox, switch, and radio controls changing retained state](docs/images/api-controls.gif)
+
+Run the complete
+[`examples/basic_controls.nim`](examples/basic_controls.nim) example with:
+
+```sh
+nim r --path:src examples/basic_controls.nim
+```
+
+[Recording source](docs/recordings/api-controls.cast)
+
 ### Text editing
 
 `newTextField` accepts a valid UTF-8 value and optional `placeholder`, positive
@@ -206,6 +244,30 @@ zero-based column and is absent when the field has no visible content cell.
 wide glyph. The public `editingBoundaries` helper documents the deliberately
 bounded segmentation policy used by the field.
 
+```nim
+import terminal_widgets
+
+let field = newTextField(newWidgetId("query"), label = "Query",
+  placeholder = "Type a search", maxRunes = 32)
+let tree = newWidgetTree(field)
+discard tree.layout(newSize(32, 1))
+discard tree.dispatch(keyInput(keyText, text = "café"))
+discard tree.dispatch(keyInput(keyArrowLeft))
+discard tree.dispatch(keyInput(keyBackspace))
+```
+
+![Text-field validation and UTF-8-safe editing](docs/images/api-text-editing.gif)
+
+Run the complete
+[`examples/text_field_editing.nim`](examples/text_field_editing.nim) example
+with:
+
+```sh
+nim r --path:src examples/text_field_editing.nim
+```
+
+[Recording source](docs/recordings/api-text-editing.cast)
+
 ### Keyed controls and composition
 
 `ChoiceItem` and `TabPage` keep labels separate from stable `ItemId` keys.
@@ -226,6 +288,29 @@ without changing the container. `newWidgetTree` validates the complete graph and
 takes exclusive ownership. Tree-managed structural mutation, allocation, and
 focus handling preserve retained values and repair invalid focus.
 
+```nim
+import terminal_widgets
+
+let profile = newTextField(newWidgetId("profile"), value = "Ada")
+let settings = newCheckbox(newWidgetId("settings"), "Compact layout")
+let tabs = newTabs(newWidgetId("pages"), [
+  newTabPage(newItemId("profile-page"), "Profile", profile),
+  newTabPage(newItemId("settings-page"), "Settings", settings)])
+let tree = newWidgetTree(tabs)
+discard tree.layout(newSize(28, 3))
+discard tree.dispatch(keyInput(keyArrowRight))
+```
+
+![Keyed tabs retaining page state](docs/images/api-tabs.gif)
+
+Run [`examples/tabs.nim`](examples/tabs.nim) with:
+
+```sh
+nim r --path:src examples/tabs.nim
+```
+
+[Recording source](docs/recordings/api-tabs.cast)
+
 ### Input and output events
 
 TerminalScreen's `InputEvent`, `KeyEvent`, `Key`, and modifier types are
@@ -244,6 +329,33 @@ available from the facade. `WidgetEvent` is a tagged object with a source
 
 `DispatchResult` carries `handled`, `needsRender`, and an ordered event sequence.
 Routing and controls return these events directly to the application or runtime.
+
+```nim
+import terminal_widgets
+
+let checkbox = newCheckbox(newWidgetId("updates"), "Product updates")
+let tree = newWidgetTree(checkbox)
+discard tree.layout(newSize(32, 1))
+
+let outcome = tree.dispatch(keyInput(keySpace))
+for event in outcome.events:
+  case event.kind
+  of boolChanged:
+    echo event.source, " changed to ", event.boolValue
+  else:
+    discard
+```
+
+![Normalized input producing typed widget events](docs/images/api-events.gif)
+
+The event animation is generated by
+[`examples/api_overview_demo.nim`](examples/api_overview_demo.nim):
+
+```sh
+nim r --path:src examples/api_overview_demo.nim events
+```
+
+[Recording source](docs/recordings/api-events.cast)
 
 ### Layout and focus routing
 
@@ -265,6 +377,36 @@ ownership, `attach(tree, parentId, widget)` to add a validated detached subtree,
 and `move(tree, id, newParentId)` to reparent an owned subtree atomically. These
 operations retain widget objects and values and repair focus against the latest
 layout size.
+
+```nim
+import terminal_widgets
+
+let navigation = newMenu(newWidgetId("navigation"), [
+  newChoiceItem(newItemId("home"), "Home"),
+  newChoiceItem(newItemId("settings"), "Settings")])
+let content = newTextField(newWidgetId("search"), "Search")
+let root = newRow(newWidgetId("workspace"),
+  [Widget(navigation), Widget(content)])
+root.setPadding(newPadding(1))
+root.setGap(1)
+root.setSizing(navigation.id, fixed(18))
+root.setSizing(content.id, flex(1))
+
+let tree = newWidgetTree(root)
+discard tree.layout(newSize(60, 5))
+discard tree.dispatch(keyInput(keyTab))
+```
+
+![Row layout and depth-first focus routing](docs/images/api-layout-focus.gif)
+
+Run the complete
+[`examples/composition_focus.nim`](examples/composition_focus.nim) example with:
+
+```sh
+nim r --path:src examples/composition_focus.nim
+```
+
+[Recording source](docs/recordings/api-layout-focus.cast)
 
 ### Frames, themes, and static text
 
@@ -289,7 +431,15 @@ never cut in half, later stack children overwrite their complete rectangles, and
 all output rows close generated styles. Full-frame presentation is the baseline;
 diff rendering is intentionally deferred until measurement justifies it.
 
+![Pure frames rendered with three widget themes](docs/images/api-frames-themes.gif)
+
+[Recording source](docs/recordings/api-frames-themes.cast)
+
 ```nim
+import terminal_widgets
+
+let field = newTextField(newWidgetId("name"), label = "Name", value = "Ada")
+let tree = newWidgetTree(field)
 let size = newSize(24, 2)
 discard tree.layout(size)
 let frame = tree.render(size, plainWidgetTheme())
@@ -333,8 +483,11 @@ The animation’s reproducible source is
 [`docs/recordings/interactive_form.cast`](docs/recordings/interactive_form.cast).
 
 ```nim
+import terminal_widgets
 import terminal_widgets/runtime
 
+let field = newTextField(newWidgetId("name"), label = "Name")
+let tree = newWidgetTree(field)
 let result = runWidgets(tree,
   onEvents = proc(context: RuntimeEventContext): RunAction =
     for event in context.outcome.events:
@@ -391,6 +544,9 @@ The repository includes these runnable examples:
   validated form through the owned TerminalScreen lifecycle in a real terminal.
 - [`examples/runtime_demo.nim`](examples/runtime_demo.nim) is the finite injected
   runtime sequence used to regenerate the README animation deterministically.
+- [`examples/api_overview_demo.nim`](examples/api_overview_demo.nim) provides the
+  finite `controls`, `tabs`, `text`, `events`, `layout`, and `frames` sequences
+  used by the API overview animations.
 - [`examples/package_import.nim`](examples/package_import.nim) verifies that a
   facade import does not initialize a terminal session.
 

@@ -1,0 +1,9 @@
+{"version":3,"term":{"cols":50,"rows":3},"timestamp":1789078256,"command":"build/bin/api_overview_demo text","title":"TerminalWidgets text editing","env":{"SHELL":"/usr/bin/zsh"}}
+[0.004, "o", "\u001b[?25l\u001b[2J\u001b[H> Name: \u001b[3;90mAda Lovelace                            \u001b[0m\u001b[0m\u001b[0m\r\n                                                \u001b[0m\u001b[0m\r\n\u001b[33mPlaceholder text is not the value\u001b[0m"]
+[0.651, "o", "\u001b[?25l\u001b[2J\u001b[H> Name: \u001b[1;31mAda Lovelace                            \u001b[0m\u001b[0m\u001b[0m\r\n\u001b[1;31m  Type a name\u001b[0m                                   \u001b[0m\u001b[0m\r\n\u001b[33mValidation errors are retained state\u001b[0m"]
+[0.651, "o", "\u001b[?25l\u001b[2J\u001b[H> Name: \u001b[1;36mA                                       \u001b[0m\u001b[0m\u001b[0m\r\n                                                \u001b[0m\u001b[0m\r\n\u001b[33mUTF-8-safe editing: A\u001b[0m"]
+[0.651, "o", "\u001b[?25l\u001b[2J\u001b[H> Name: \u001b[1;36mAd                                      \u001b[0m\u001b[0m\u001b[0m\r\n                                                \u001b[0m\u001b[0m\r\n\u001b[33mUTF-8-safe editing: Ad\u001b[0m"]
+[0.651, "o", "\u001b[?25l\u001b[2J\u001b[H> Name: \u001b[1;36mAda                                     \u001b[0m\u001b[0m\u001b[0m\r\n                                                \u001b[0m\u001b[0m\r\n\u001b[33mUTF-8-safe editing: Ada\u001b[0m"]
+[0.651, "o", "\u001b[?25l\u001b[2J\u001b[H> Name: \u001b[1;36mAa                                      \u001b[0m\u001b[0m\u001b[0m\r\n                                                \u001b[0m\u001b[0m\r\n\u001b[33mNavigation and deletion use cluster boundaries\u001b[0m"]
+[0.650, "o", "\u001b[?25h"]
+[0.001, "x", "0"]

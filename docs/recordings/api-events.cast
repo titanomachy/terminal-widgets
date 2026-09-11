@@ -1,0 +1,7 @@
+{"version":3,"term":{"cols":46,"rows":2},"timestamp":1789078260,"command":"build/bin/api_overview_demo events","title":"TerminalWidgets input and events","env":{"SHELL":"/usr/bin/zsh"}}
+[0.003, "o", "\u001b[?25l\u001b[2J\u001b[H\u001b[1;36m> [ ] Product updates\u001b[0m                       \u001b[0m\u001b[0m\r\n\u001b[33mInput: none | Events: []\u001b[0m"]
+[0.650, "o", "\u001b[?25l\u001b[2J\u001b[H\u001b[1;36m> [x] Product updates\u001b[0m                       \u001b[0m\u001b[0m\r\n\u001b[33mInput: Space | boolChanged(value: true)\u001b[0m"]
+[0.650, "o", "\u001b[?25l\u001b[2J\u001b[H\u001b[1;36m> [x] Product updates\u001b[0m                       \u001b[0m\u001b[0m\r\n\u001b[33mInput: Down | handled: false | Events: []\u001b[0m"]
+[0.651, "o", "\u001b[?25l\u001b[2J\u001b[H\u001b[1;36m> [ ] Product updates\u001b[0m                       \u001b[0m\u001b[0m\r\n\u001b[33mInput: Enter | boolChanged(value: false)\u001b[0m"]
+[0.650, "o", "\u001b[?25h"]
+[0.000, "x", "0"]

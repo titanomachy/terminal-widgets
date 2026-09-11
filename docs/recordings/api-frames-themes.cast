@@ -1,0 +1,7 @@
+{"version":3,"term":{"cols":48,"rows":3},"timestamp":1789078266,"command":"build/bin/api_overview_demo frames","title":"TerminalWidgets frames and themes","env":{"SHELL":"/usr/bin/zsh"}}
+[0.003, "o", "\u001b[?25l\u001b[2J\u001b[H> Name: \u001b[1;36mAda                                   \u001b[0m\u001b[0m\u001b[0m\r\n  [x] Enabled                                 \u001b[0m\u001b[0m\r\n\u001b[33mdefaultWidgetTheme()\u001b[0m"]
+[0.651, "o", "\u001b[?25l\u001b[2J\u001b[H> Name: Ada                                   \u001b[0m\r\n  [x] Enabled                                 \u001b[0m\r\n\u001b[33mplainWidgetTheme()\u001b[0m"]
+[0.651, "o", "\u001b[?25l\u001b[2J\u001b[H› Name: \u001b[1;36mAda                                   \u001b[0m\u001b[0m\u001b[0m\r\n  ☑ Enabled                                   \u001b[0m\u001b[0m\r\n\u001b[33municodeWidgetTheme()\u001b[0m"]
+[0.650, "o", "\u001b[?25l\u001b[2J\u001b[H  Name: Ada                                   \u001b[0m\u001b[0m\r\n\u001b[1;36m› ☑ Enabled\u001b[0m                                   \u001b[0m\u001b[0m\r\n\u001b[33mFrames also carry optional cursor metadata\u001b[0m"]
+[0.650, "o", "\u001b[?25h"]
+[0.001, "x", "0"]
