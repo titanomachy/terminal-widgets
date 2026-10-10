@@ -13,6 +13,7 @@ All notable changes to TerminalWidgets are documented in this file.
   including hidden controls, tab-page switches, and resulting focus repair.
 - Redraw focus markers and cursor positions when application callbacks request
   focus without changing widget values.
+- Fix an ARM64 crash in the validator cleanup regression test.
 
 ## v0.1.0 - 2026-09-11
 

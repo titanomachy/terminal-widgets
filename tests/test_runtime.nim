@@ -342,9 +342,11 @@ suite "runtime lifecycle and event loop":
     backend.failures = @["show-cursor"]
     let field = newTextField(newWidgetId("validator-defect"), value = "x",
       validator = proc(value: string): Option[string] =
+        # Bounds-defect unwinding must return an initialized managed value so
+        # caller cleanup is safe on ARM64 as well as x86-64.
+        result = none(string)
         let values = @["only entry"]
-        discard values[value.len]
-        none(string))
+        discard values[value.len])
     let tree = newWidgetTree(field)
     var message = ""
     try:
