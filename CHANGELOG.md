@@ -2,7 +2,7 @@
 
 All notable changes to TerminalWidgets are documented in this file.
 
-## Unreleased
+## v0.1.1 - 2026-10-10
 
 ### Fixed
 

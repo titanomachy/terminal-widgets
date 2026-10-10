@@ -20,7 +20,7 @@ suite "release readiness metadata":
     check notices.count("License: MIT") == 2
 
   test "manifest pins floors and excludes non-package working directories":
-    check "version = \"0.1.0\"" in manifest
+    check "version = \"0.1.1\"" in manifest
     check "requires \"nim >= 2.0.0\"" in manifest
     check "requires \"terminal_style >= 0.1.1\"" in manifest
     check "requires \"terminal_screen >= 0.1.1\"" in manifest
@@ -30,13 +30,16 @@ suite "release readiness metadata":
     check "proc runReleaseStep" in manifest
     check "execution.exitCode != 0" in manifest
 
-  test "release notes identify evidence limits and owner handoff":
-    check "TerminalWidgets 0.1.0" in releaseNotes
-    check "Nim 2.0.4 and 2.2.10" in releaseNotes
-    check "complete hosted CI matrix passes" in releaseNotes
-    check "macOS, and Windows" in releaseNotes
-    check "repository owner" in releaseNotes
-    check "publishing" in releaseNotes
+  test "release metadata agrees and documents compatibility checks and limits":
+    check "TerminalWidgets 0.1.1" in releaseNotes
+    check "## v0.1.1 - " in changelog
+    check "nimble releaseCheck -y" in releaseNotes
+    check "Linux" in releaseNotes
+    check "macOS" in releaseNotes
+    check "Windows" in releaseNotes
+    check "ARC" in releaseNotes
+    check "ORC" in releaseNotes
+    check "--panics:on" in releaseNotes
     check "RELEASE_NOTES.md" in readme
     check "THIRD_PARTY_NOTICES.md" in readme
     check "```mermaid" in readme

@@ -586,12 +586,10 @@ Command-line `--out` and `--nimcache` overrides take precedence over
 
 ## Release information
 
-The candidate’s compatibility evidence and exact reproduction commands are in
-release records. See
-[`RELEASE_NOTES.md`](RELEASE_NOTES.md) for the 0.1.0 highlights and known limits.
-The final engineering assessment and tracked findings are in
-the final engineering assessment. Tagging and package publication
-remain explicit repository-owner actions.
+See [`RELEASE_NOTES.md`](RELEASE_NOTES.md) for the v0.1.1 runtime fixes,
+compatibility checks, and known limits. [`CHANGELOG.md`](CHANGELOG.md) records
+the release history. Tagged releases are available on
+[GitHub](https://github.com/titanomachy/terminal-widgets/releases).
 
 ## Attribution and license
 

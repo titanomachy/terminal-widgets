@@ -1,6 +1,6 @@
 import std/[algorithm, os, strutils]
 
-version = "0.1.0"
+version = "0.1.1"
 author = "titanomachy"
 description = "Pure-Nim persistent, composable terminal controls and focus handling"
 license = "MIT"
