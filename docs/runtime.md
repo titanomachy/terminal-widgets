@@ -26,9 +26,11 @@ The owned overload performs this transaction:
 
 Each restoration is registered before its acquisition write. Every applicable
 cleanup step is attempted after normal callback stop, Ctrl+C, EOF, read/write or
-callback failure, validator failure, and partial initialization. An uncatchable
-process termination cannot run language-level cleanup and is outside the
-guarantee.
+callback failure, validator failure, and partial initialization. This includes
+assertion and indexing defects that unwind the stack. Cleanup runs in `finally`,
+and a failure in one restoration does not prevent the remaining steps. Process
+termination that prevents stack unwinding, including defects compiled with
+`--panics:on`, is outside the cleanup guarantee.
 
 The adapter writes full frames with absolute cursor positioning and no trailing
 newline. Autowrap ownership prevents the bottom-right cell from scrolling.

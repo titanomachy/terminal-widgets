@@ -2,6 +2,14 @@
 
 All notable changes to TerminalWidgets are documented in this file.
 
+## Unreleased
+
+### Fixed
+
+- Restore all acquired terminal modes and close owned sessions when callbacks or
+  validators raise stack-unwinding defects, preserving the original failure even
+  if cleanup also fails.
+
 ## v0.1.0 - 2026-09-11
 
 ### Release preparation

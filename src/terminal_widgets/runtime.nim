@@ -96,8 +96,15 @@ proc runWidgetsWithBackend*(tree: WidgetTree; backend: RuntimeBackend;
     cursor = false
     autowrap = false
     presentationStarted = false
-    primary: ref CatchableError
+    primary: ref Exception
     cleanupErrors: seq[string]
+
+  template cleanup(label: string; condition: bool; operation: untyped) =
+    if condition:
+      try:
+        operation
+      except Exception as error:
+        cleanupErrors.add label & ": " & error.msg
 
   try:
     if ownedSession:
@@ -163,21 +170,14 @@ proc runWidgetsWithBackend*(tree: WidgetTree; backend: RuntimeBackend;
       if input.kind == eventResize or outcome.needsRender or applicationChanged:
         backend.present(tree.render(size, options.theme), ownPresentation)
         inc result.framesPresented
-  except CatchableError as error:
+  except Exception as error:
     primary = error
-
-  template cleanup(label: string; condition: bool; operation: untyped) =
-    if condition:
-      try:
-        operation
-      except CatchableError as error:
-        cleanupErrors.add label & ": " & error.msg
-
-  cleanup("reset styles", presentationStarted, backend.resetStyles())
-  cleanup("restore autowrap", autowrap, backend.enableAutoWrap())
-  cleanup("restore cursor", cursor, backend.showCursor())
-  cleanup("leave alternate screen", alternate, backend.leaveAlternateScreen())
-  cleanup("close session", opened, backend.closeOwned())
+  finally:
+    cleanup("reset styles", presentationStarted, backend.resetStyles())
+    cleanup("restore autowrap", autowrap, backend.enableAutoWrap())
+    cleanup("restore cursor", cursor, backend.showCursor())
+    cleanup("leave alternate screen", alternate, backend.leaveAlternateScreen())
+    cleanup("close session", opened, backend.closeOwned())
 
   if not primary.isNil:
     if cleanupErrors.len > 0:

@@ -236,6 +236,38 @@ suite "runtime lifecycle and event loop":
       check backend.presentCalls == 2
       check backend.operations[^1] == "close"
 
+  test "callback assertion failures restore every acquired terminal stage":
+    let backend = scripted([keyInput(keyUnknown)])
+    let tree = newWidgetTree(newCheckbox(newWidgetId("callback-defect"),
+      "Callback"))
+    expect AssertionDefect:
+      discard runWidgetsWithBackend(tree, backend,
+        onEvents = proc(context: RuntimeEventContext): RunAction =
+          doAssert false, "application invariant failed"
+          continueRunning)
+    check backend.operations[^5 .. ^1] == @[
+      "reset", "enable-wrap", "show-cursor", "leave-screen", "close"]
+
+  test "validator defects remain primary when terminal restoration fails":
+    let backend = scripted([keyInput(keyEnter)])
+    backend.failures = @["show-cursor"]
+    let field = newTextField(newWidgetId("validator-defect"), value = "x",
+      validator = proc(value: string): Option[string] =
+        let values = @["only entry"]
+        discard values[value.len]
+        none(string))
+    let tree = newWidgetTree(field)
+    var message = ""
+    try:
+      discard runWidgetsWithBackend(tree, backend)
+    except IndexDefect as error:
+      message = error.msg
+    check "index" in message
+    check "cleanup failures" in message
+    check "restore cursor: injected show-cursor" in message
+    check backend.operations[^5 .. ^1] == @[
+      "reset", "enable-wrap", "show-cursor", "leave-screen", "close"]
+
   test "cleanup attempts every stage and preserves the primary exception":
     let cleanupBackend = scripted([endOfInput()])
     cleanupBackend.failures = @[

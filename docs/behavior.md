@@ -73,7 +73,8 @@ rendering is the correctness baseline; no diff renderer is currently exposed.
 - `TerminalIOError` reports terminal reads/writes and presentation failures.
 - `TerminalStateError` reports invalid session/backend state and cleanup-only
   failures.
-- Validator and application callback exceptions propagate after runtime cleanup.
+- Validator and application callback exceptions, including assertion and indexing
+  defects that unwind the stack, propagate after runtime cleanup.
 
 When a runtime operation fails, its original exception type and message remain
 primary. Cleanup failures are appended as details rather than replacing it.
