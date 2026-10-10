@@ -148,6 +148,7 @@ proc runWidgetsWithBackend*(tree: WidgetTree; backend: RuntimeBackend;
       else:
         outcome = tree.dispatch(input)
 
+      let focusedBeforeCallback = tree.focused
       var action = continueRunning
       if not onEvents.isNil:
         action = onEvents(RuntimeEventContext(input: input, outcome: outcome))
@@ -167,7 +168,9 @@ proc runWidgetsWithBackend*(tree: WidgetTree; backend: RuntimeBackend;
             result.termination = requestedStop
             running = false
             continue
-      if input.kind == eventResize or outcome.needsRender or applicationChanged:
+      # Tree focus changes do not increment any widget's revision.
+      if input.kind == eventResize or outcome.needsRender or applicationChanged or
+          tree.focused != focusedBeforeCallback:
         backend.present(tree.render(size, options.theme), ownPresentation)
         inc result.framesPresented
   except Exception as error:

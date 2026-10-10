@@ -30,6 +30,10 @@ changes, resize, reordering, and movement of retained widgets. Collection keys,
 not labels or indices, preserve identity. Same-value setters do not increment
 `revision`; setters do not emit user events.
 
+Runtime callbacks may call `requestFocus` to advance focus after a submission.
+Focus changes update the displayed marker and cursor before the next input,
+independently of widget revisions.
+
 Radio groups, lists, and menus clamp `topIndex` after navigation, selection,
 replacement, and resize so their active row stays in the allocated viewport.
 Their rendering cost is proportional to visible rows; replacement and scans

@@ -180,6 +180,45 @@ suite "runtime lifecycle and event loop":
     check second.value == "Second"
     check stripAnsi(backend.frames[^1].rows[1]).contains("Second")
 
+  test "submission callbacks redraw focus and cursor before the next input":
+    let backend = scripted([
+      keyInput(keyEnter), timeoutInput(), keyInput(keyText, text = "x"),
+      endOfInput()])
+    let first = newTextField(newWidgetId("submit-first"), label = "First")
+    let second = newTextField(newWidgetId("submit-second"), label = "Second")
+    let tree = newWidgetTree(newColumn(newWidgetId("submit-root"),
+      [Widget(first), Widget(second)]))
+    var callbacks = 0
+    let result = runWidgetsWithBackend(tree, backend,
+      onEvents = proc(context: RuntimeEventContext): RunAction =
+        inc callbacks
+        for event in context.outcome.events:
+          if event.kind == submitted:
+            discard tree.requestFocus(second.id)
+        continueRunning)
+    check result.termination == endOfInput
+    check result.framesPresented == 3
+    check callbacks == 2
+    check tree.focused == some(second.id)
+    check first.value == ""
+    check second.value == "x"
+    require backend.frames.len == 3
+    check stripAnsi(backend.frames[1].rows[0]).startsWith("  First: ")
+    check stripAnsi(backend.frames[1].rows[1]).startsWith("> Second: ")
+    check backend.frames[1].cursor == some(CursorCell(column: 10, row: 1))
+    check backend.frames[2].cursor == some(CursorCell(column: 11, row: 1))
+
+  test "requesting the current focus in a callback does not redraw":
+    let backend = scripted([keyInput(keyEnter), endOfInput()])
+    let field = newTextField(newWidgetId("same-focus"), label = "Name")
+    let tree = newWidgetTree(field)
+    let result = runWidgetsWithBackend(tree, backend,
+      onEvents = proc(context: RuntimeEventContext): RunAction =
+        discard tree.requestFocus(field.id)
+        continueRunning)
+    check result.termination == endOfInput
+    check result.framesPresented == 1
+
   test "Ctrl+C cancels before dispatch or application delivery":
     let backend = scripted([keyInput(keyCtrlC)])
     let control = newCheckbox(newWidgetId("cancel"), "Cancel")

@@ -62,6 +62,12 @@ can hide controls or switch tab pages to fit the new viewport, and their updated
 layout is used for presentation. Focus-repair events caused by that layout are
 delivered in a second callback context for the same input.
 
+Calling `requestFocus` in a callback also redraws the focus marker and cursor
+before the next input is read, even when no widget value changes. For example,
+a submission handler can focus the next field without leaving the displayed
+cursor on the previous one. Requesting the current focus does not trigger an
+extra frame.
+
 ## Failures and evidence
 
 Unsupported or redirected streams raise `TerminalUnavailableError` before ANSI

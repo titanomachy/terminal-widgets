@@ -470,6 +470,9 @@ and redraw, including changes made in resize callbacks. Timeout polls do not
 redraw, resize forces a full layout/frame, and `pollTimeoutMs` must be in
 `1..60000`.
 
+Calling `requestFocus` in the handler updates the displayed focus marker and
+cursor before the next input, even when no widget value changes.
+
 The borrowed overload accepts an open `TerminalSession` and its exact matching
 output `File`—a necessary caller precondition because TerminalScreen 0.1.1 has no
 public output getter. It never opens or closes the session. By default it also
