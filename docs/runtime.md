@@ -57,8 +57,10 @@ Escape and other unhandled keys reach `RuntimeEventHandler`, which may return
 
 The callback receives input only after widget dispatch has produced its ordered
 events. If the callback mutates retained state, the runtime lays out and presents
-once before the next poll. Focus-repair events caused by that layout are delivered
-in a second callback context for the same input.
+once before the next poll. This also applies to resize callbacks: applications
+can hide controls or switch tab pages to fit the new viewport, and their updated
+layout is used for presentation. Focus-repair events caused by that layout are
+delivered in a second callback context for the same input.
 
 ## Failures and evidence
 

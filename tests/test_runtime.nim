@@ -130,6 +130,56 @@ suite "runtime lifecycle and event loop":
     check result.framesPresented == 2
     check stripAnsi(backend.frames[^1].rows[0]).contains("[x]")
 
+  test "resize callbacks can hide focused controls and deliver focus repair":
+    let backend = scripted([resizeInput(terminalSize(12, 2)), endOfInput()])
+    let first = newCheckbox(newWidgetId("resize-first"), "First")
+    let second = newCheckbox(newWidgetId("resize-second"), "Second")
+    let tree = newWidgetTree(newColumn(newWidgetId("resize-root"),
+      [Widget(first), Widget(second)]))
+    var callbacks = 0
+    var repaired: seq[WidgetEvent]
+    let result = runWidgetsWithBackend(tree, backend,
+      onEvents = proc(context: RuntimeEventContext): RunAction =
+        inc callbacks
+        check context.input.kind == eventResize
+        if callbacks == 1:
+          first.setVisible(false)
+        else:
+          repaired = context.outcome.events
+        continueRunning)
+    check result.termination == endOfInput
+    check result.framesPresented == 2
+    check callbacks == 2
+    check first.allocation.isNone
+    check second.allocation == some(newRect(0, 0, 12, 2))
+    check tree.focused == some(second.id)
+    require repaired.len == 1
+    check repaired[0].kind == focusChanged
+    check repaired[0].previousFocus == some(first.id)
+    check repaired[0].newFocus == some(second.id)
+    check stripAnsi(backend.frames[^1].rows[0]) == "> [ ] Second"
+
+  test "resize callbacks can switch retained tab pages before presentation":
+    let backend = scripted([resizeInput(terminalSize(16, 2)), endOfInput()])
+    let first = newTextField(newWidgetId("resize-page-first"), value = "First")
+    let second = newTextField(newWidgetId("resize-page-second"), value = "Second")
+    let secondPage = newItemId("resize-page-two")
+    let tabs = newTabs(newWidgetId("resize-tabs"), [
+      newTabPage(newItemId("resize-page-one"), "One", first),
+      newTabPage(secondPage, "Two", second)])
+    let tree = newWidgetTree(tabs)
+    let result = runWidgetsWithBackend(tree, backend,
+      onEvents = proc(context: RuntimeEventContext): RunAction =
+        tabs.setActive(some(secondPage))
+        continueRunning)
+    check result.termination == endOfInput
+    check result.framesPresented == 2
+    check first.allocation.isNone
+    check second.allocation == some(newRect(0, 1, 16, 1))
+    check first.value == "First"
+    check second.value == "Second"
+    check stripAnsi(backend.frames[^1].rows[1]).contains("Second")
+
   test "Ctrl+C cancels before dispatch or application delivery":
     let backend = scripted([keyInput(keyCtrlC)])
     let control = newCheckbox(newWidgetId("cancel"), "Cancel")

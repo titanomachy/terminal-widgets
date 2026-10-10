@@ -157,7 +157,7 @@ proc runWidgetsWithBackend*(tree: WidgetTree; backend: RuntimeBackend;
         continue
 
       let applicationChanged = tree.modelStamp() != beforeCallback
-      if applicationChanged and input.kind != eventResize:
+      if applicationChanged:
         let layoutOutcome = tree.layout(size)
         outcome.needsRender = outcome.needsRender or layoutOutcome.needsRender
         if layoutOutcome.events.len > 0 and not onEvents.isNil:

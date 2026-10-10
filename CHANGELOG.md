@@ -9,6 +9,8 @@ All notable changes to TerminalWidgets are documented in this file.
 - Restore all acquired terminal modes and close owned sessions when callbacks or
   validators raise stack-unwinding defects, preserving the original failure even
   if cleanup also fails.
+- Reconcile widget changes made in resize callbacks before presenting the frame,
+  including hidden controls, tab-page switches, and resulting focus repair.
 
 ## v0.1.0 - 2026-09-11
 

@@ -15,8 +15,8 @@ TerminalWidgets works on Linux, macOS, and Windows.
 ## Requirements
 
 - Nim 2.0.0 or newer
-- [`terminal_style`](https://github.com/titanomachy/terminal-style) 0.1.1 or newer
-- [`terminal_screen`](https://github.com/titanomachy/terminal-screen) 0.1.1 or newer
+- [`terminal_style`](https://github.com/titanomachy/terminal-style)
+- [`terminal_screen`](https://github.com/titanomachy/terminal-screen)
 
 ## TerminalDeck
 
@@ -45,7 +45,7 @@ flowchart TB
   ecosystem --> data["Tabular & Visual<br/>Data<br/>────────────<br/>TerminalTable<br/>TerminalGraph<br/>(Charts, Spark)"]
   ecosystem --> layout["Structural &<br/>Layout<br/>────────────<br/>TerminalLayout<br/>(Trees, Panels,<br/>Callouts)"]
   ecosystem --> status["Status &<br/>Progress<br/>────────────<br/>TerminalStatus<br/>(Spinners,<br/>Progress Bars)"]
-  ecosystem --> interaction["Interactive UI<br/>Components<br/>────────────<br/>TerminalPrompt<br/>TerminalWidgets<br/>(Prompts, Tabs)"]
+  ecosystem --> interaction["Interactive UI<br/>Components<br/>────────────<br/>TerminalPrompt<br/>TerminalWidgets<br/>(Prompts, Tabs, etc.)"]
 
   layout --> terminalScreen["TerminalScreen<br/>Alternate Screen · Raw Mode · Cursor<br/>Control · Terminal Geometry"]
 ```
@@ -466,8 +466,9 @@ returns `requestedStop`; exceptions remain exceptions after cleanup.
 The handler receives each dispatched input plus its ordered `WidgetEvent`
 outcome. Unhandled keys, including Escape, are delivered there instead of being
 silently discarded. Application mutations made after dispatch cause one layout
-and redraw. Timeout polls do not redraw, resize forces a full layout/frame, and
-`pollTimeoutMs` must be in `1..60000`.
+and redraw, including changes made in resize callbacks. Timeout polls do not
+redraw, resize forces a full layout/frame, and `pollTimeoutMs` must be in
+`1..60000`.
 
 The borrowed overload accepts an open `TerminalSession` and its exact matching
 output `File`—a necessary caller precondition because TerminalScreen 0.1.1 has no
