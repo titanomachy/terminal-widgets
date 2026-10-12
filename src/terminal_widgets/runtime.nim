@@ -26,15 +26,20 @@ type
     stopRunning
 
   RuntimeEventContext* = object
-    ## One fully dispatched input delivered after ordered widget events exist.
+    ## A dispatched input or layout/focus repair with ordered widget events.
+    ## Repairs after an idle callback retain the original timeout as input.
     input*: InputEvent
     outcome*: DispatchResult
 
   RuntimeEventHandler* = proc(context: RuntimeEventContext): RunAction {.closure.}
 
+  RuntimeTimeoutHandler* = proc(): RunAction {.closure.}
+    ## Synchronous idle hook, called once per input timeout without dispatch.
+    ## Keep it short; this is not a periodic timer under continuous input.
+
   RuntimeOptions* = object
     ## Runtime policy independent of TerminalScreen's session options.
-    pollTimeoutMs*: int
+    pollTimeoutMs*: int ## Input wait in 1..60000 ms, not a guaranteed tick interval.
     fallbackSize*: Size
     theme*: WidgetTheme
     ownBorrowedPresentation*: bool
@@ -82,8 +87,15 @@ proc runWidgetsWithBackend*(tree: WidgetTree; backend: RuntimeBackend;
                             options = defaultRuntimeOptions();
                             onEvents: RuntimeEventHandler = nil;
                             ownedSession = true;
-                            ownPresentation = true): RunResult =
+                            ownPresentation = true;
+                            onTimeout: RuntimeTimeoutHandler = nil): RunResult =
   ## Runs one backend with transactional acquisition and complete cleanup.
+  ## Each input timeout calls ``onTimeout`` once, if supplied, on this thread.
+  ## Idle callbacks may change widgets/focus or return ``stopRunning``. Changes
+  ## share event-handler layout, focus repair, and at most one redraw; a no-op
+  ## does not redraw. Repair events reach ``onEvents`` with the timeout input,
+  ## but timeouts themselves never dispatch or trigger ``onEvents``.
+  ## Stop skips the final redraw; callback exceptions propagate after cleanup.
   if tree.isNil or tree.root.isNil:
     raise newException(ValueError, "widget tree must not be nil")
   if backend.isNil:
@@ -137,12 +149,14 @@ proc runWidgetsWithBackend*(tree: WidgetTree; backend: RuntimeBackend;
       if input.kind == eventKey and input.keyEvent.key == keyCtrlC:
         result.termination = cancelled
         break
-      if input.kind == eventTimeout:
+      if input.kind == eventTimeout and onTimeout.isNil:
         continue
 
       let beforeCallback = tree.modelStamp()
       var outcome: DispatchResult
-      if input.kind == eventResize:
+      if input.kind == eventTimeout:
+        discard # Idle input never enters widget dispatch.
+      elif input.kind == eventResize:
         size = newSize(input.size.columns, input.size.rows)
         outcome = tree.layout(size)
       else:
@@ -150,7 +164,9 @@ proc runWidgetsWithBackend*(tree: WidgetTree; backend: RuntimeBackend;
 
       let focusedBeforeCallback = tree.focused
       var action = continueRunning
-      if not onEvents.isNil:
+      if input.kind == eventTimeout:
+        action = onTimeout()
+      elif not onEvents.isNil:
         action = onEvents(RuntimeEventContext(input: input, outcome: outcome))
       if action == stopRunning:
         result.termination = requestedStop
@@ -191,22 +207,27 @@ proc runWidgetsWithBackend*(tree: WidgetTree; backend: RuntimeBackend;
       "runtime cleanup failed: " & cleanupErrors.join("; "))
 
 proc runWidgets*(tree: WidgetTree; options = defaultRuntimeOptions();
-                 onEvents: RuntimeEventHandler = nil): RunResult =
+                 onEvents: RuntimeEventHandler = nil;
+                 onTimeout: RuntimeTimeoutHandler = nil): RunResult =
   ## Opens, owns, restores, and closes one TerminalScreen session.
+  ## ``onTimeout`` is an optional synchronous idle hook, not a periodic timer.
   let backend = newOwnedTerminalBackend()
   runWidgetsWithBackend(tree, backend, options, onEvents,
-    ownedSession = true, ownPresentation = true)
+    ownedSession = true, ownPresentation = true, onTimeout = onTimeout)
 
 proc runWidgets*(tree: WidgetTree; session: TerminalSession; output: File;
                  options = defaultRuntimeOptions();
-                 onEvents: RuntimeEventHandler = nil): RunResult =
+                 onEvents: RuntimeEventHandler = nil;
+                 onTimeout: RuntimeTimeoutHandler = nil): RunResult =
   ## Uses an open caller-owned session and its exact output stream.
   ##
   ## The caller must already have established raw mode. By default this path
   ## neither changes screen/cursor/autowrap modes nor closes the session. Set
   ## ``ownBorrowedPresentation`` only when the stated baseline is the normal
   ## screen with a visible cursor and enabled autowrap.
+  ## ``onTimeout`` has the same idle, redraw, stop, and cleanup contract as the
+  ## owned overload; it does not change session or presentation ownership.
   let backend = newBorrowedTerminalBackend(session, output)
   runWidgetsWithBackend(tree, backend, options, onEvents,
     ownedSession = false,
-    ownPresentation = options.ownBorrowedPresentation)
+    ownPresentation = options.ownBorrowedPresentation, onTimeout = onTimeout)

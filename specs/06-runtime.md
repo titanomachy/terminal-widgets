@@ -4,13 +4,16 @@ Traceability: Phase 08. Import explicitly with `terminal_widgets/runtime`.
 
 ## Runtime API and backend
 
-Proposed entry points: `runWidgets(tree, options, onEvents): RunResult` for an
+Entry points: `runWidgets(tree, options, onEvents, onTimeout): RunResult` for an
 owned session, and an overload accepting a caller-owned `TerminalSession` plus
 the matching borrowed output stream. The supplied output must be the session's
 actual output; TerminalScreen exposes no public output getter in the inspected
 version. Make this precondition explicit. `RunResult` distinguishes requested
 stop, cancellation and EOF. Application event handlers return continue/stop and
 may update the tree after dispatch returns. Exceptions remain exceptions.
+All entry points, including `runWidgetsWithBackend`, append the optional
+`RuntimeTimeoutHandler = proc(): RunAction {.closure.}` as `onTimeout = nil`
+after existing arguments, preserving positional and named callsites.
 
 Use an injected backend with operations for capabilities, initial size, reading
 one `InputEvent`, presenting a frame, and acquiring/releasing runtime modes.
@@ -58,7 +61,15 @@ guarantee; document this alongside the supported normal/exception paths.
 
 Dispatch one event, then deliver its output events in order, apply application
 updates, repair focus/layout as needed, and redraw once if revision/size changed.
-Timeout events do not cause busy redraws. Use a positive bounded poll timeout,
+Timeout events never dispatch or directly invoke `onEvents`. If supplied,
+`onTimeout` runs once per actual timeout on the runtime thread and may mutate
+state/focus or stop. Apply the same stamp/focus reconciliation and at most one
+redraw; no-op callbacks stay idle. Layout/focus repair events may invoke
+`onEvents` with the original timeout input. A stop skips further reads and the
+final redraw, while exceptions use the normal cleanup/primary-error contract.
+The hook is idle-only: continuous input can suppress it, with no periodic-timer
+or catch-up guarantee. Add no sleeps, threads, or independent redraw loop.
+Use a positive bounded poll timeout,
 default 50 ms; reject invalid intervals. Ctrl+C returns cancelled before control
 dispatch; EOF returns end-of-input without retrying. Escape reaches the application
 as an unhandled key and does not quit by default. Other unhandled keys are exposed
@@ -85,7 +96,9 @@ close for owned sessions, zero close for borrowed sessions, and no screen/cursor
 mode changes in caller-owned mode. Inject failures during open, entry, first frame,
 read, callback, validator, redraw and each cleanup action. Check original error
 preservation. Test EOF, Ctrl+C, unknown keys, resize, fallback geometry, timeout
-idle behavior and noninteractive rejection without ANSI output.
+idle behavior and noninteractive rejection without ANSI output. Script timeout
+callbacks to verify counts, batched updates, focus changes and repairs, no-op
+frames, stop-before-redraw, and cleanup after exceptions in all ownership modes.
 
 Add real PTY coverage on POSIX and appropriate Windows console coverage for raw
 mode and cursor/screen restoration. Record manual terminal checks where automation

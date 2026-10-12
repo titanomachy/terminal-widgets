@@ -78,10 +78,28 @@ still removed.
 ## Runtime
 
 `runWidgets` returns a `RunResult` whose termination is `requestedStop`,
-`cancelled`, or `endOfInput`, plus the number of frames presented. Its callback
-receives each non-timeout input and ordered `DispatchResult`; return `stopRunning`
-to exit normally. See [runtime.md](runtime.md) for terminal ownership and failure
-contracts and [behavior.md](behavior.md) for fixed keys, Unicode scope, and errors.
+`cancelled`, or `endOfInput`, plus the number of frames presented.
+
+| Entry point / type | Contract |
+| --- | --- |
+| `runWidgets(tree, options, onEvents, onTimeout)` | Opens and owns a session |
+| `runWidgets(tree, session, output, options, onEvents, onTimeout)` | Borrows an open session and its matching output |
+| `runWidgetsWithBackend(tree, backend, options, onEvents, ownedSession, ownPresentation, onTimeout)` | Runs an injected backend with explicit ownership |
+| `RuntimeEventHandler = proc(context: RuntimeEventContext): RunAction {.closure.}` | Receives dispatched input and ordered `DispatchResult`, plus layout/focus repair events |
+| `RuntimeTimeoutHandler = proc(): RunAction {.closure.}` | Optional synchronous idle callback, once per actual input timeout |
+
+Both handlers may update widgets/focus or return `stopRunning` to exit normally
+without a final redraw. `onTimeout` defaults to `nil` and is the final optional
+parameter in all overloads, preserving existing calls. Timeout input never
+dispatches or directly calls `onEvents`; focus-repair notifications can call
+`onEvents` with the original timeout input. No changes means no extra frame.
+`pollTimeoutMs` bounds the input wait (`1..60000`), not a periodic timer:
+continuous input may suppress idle callbacks.
+
+See [idle_updates.nim](../examples/idle_updates.nim) for a small status example
+and [runtime.md](runtime.md#idle-updates) for idle semantics, terminal ownership,
+and failure contracts. [behavior.md](behavior.md) covers fixed keys, Unicode
+scope, and errors.
 
 Compiler-generated symbol documentation is produced only under `build/docs/`:
 

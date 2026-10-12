@@ -1,7 +1,8 @@
-import std/[options, strutils, unittest]
+import std/[options, sequtils, strutils, unittest]
 import terminal_style
 import terminal_widgets
 import terminal_widgets/runtime
+import terminal_widgets/widget
 
 type ScriptedBackend = ref object of RuntimeBackend
   operations: seq[string]
@@ -13,6 +14,13 @@ type ScriptedBackend = ref object of RuntimeBackend
   presentCalls: int
   failPresentAt: int
   nonInteractive: bool
+
+type InputProbe = ref object of Checkbox
+  inputs: seq[InputEventKind]
+
+method handleInput(control: InputProbe; input: InputEvent): DispatchResult =
+  control.inputs.add input.kind
+  dispatchResult()
 
 proc step(backend: ScriptedBackend; operation: string) =
   backend.operations.add operation
@@ -129,6 +137,241 @@ suite "runtime lifecycle and event loop":
     check result.termination == endOfInput
     check result.framesPresented == 2
     check stripAnsi(backend.frames[^1].rows[0]).contains("[x]")
+
+  test "timeout callbacks run once per timeout without dispatch or event delivery":
+    for withCallback in [false, true]:
+      let backend = scripted([timeoutInput(), timeoutInput(),
+        keyInput(keyUnknown), timeoutInput(), endOfInput()])
+      let control = InputProbe()
+      control.initializeWidgetState(newWidgetId("idle-probe"), "Probe")
+      let tree = newWidgetTree(control)
+      var timeouts = 0
+      var callbacks = 0
+      let idle: RuntimeTimeoutHandler = if withCallback:
+        proc(): RunAction =
+          inc timeouts
+          continueRunning
+        else: nil
+      let result = runWidgetsWithBackend(tree, backend,
+        onEvents = proc(context: RuntimeEventContext): RunAction =
+          inc callbacks
+          check context.input.kind == eventKey
+          continueRunning,
+        onTimeout = idle)
+      check result.termination == endOfInput
+      check result.framesPresented == 1
+      check backend.frames.len == 1
+      check timeouts == (if withCallback: 3 else: 0)
+      check callbacks == 1
+      check control.inputs == @[eventKey]
+
+  test "timeout content changes redraw once and unchanged setters stay idle":
+    let backend = scripted([timeoutInput(), timeoutInput(), endOfInput()])
+    let status = newStaticText(newWidgetId("idle-status"), "Updates: 0")
+    let tree = newWidgetTree(status)
+    var callbacks = 0
+    var options = defaultRuntimeOptions()
+    options.pollTimeoutMs = 250
+    let result = runWidgetsWithBackend(tree, backend, options,
+      onTimeout = proc(): RunAction =
+        inc callbacks
+        status.setContent("Updates: 1")
+        continueRunning)
+    check result.termination == endOfInput
+    check callbacks == 2
+    check result.framesPresented == 2
+    check stripAnsi(backend.frames[^1].rows[0]) == "Updates: 1".alignLeft(20)
+    check backend.operations.count("read:250") == 3
+
+  test "timeout changes to multiple widgets produce one frame":
+    let backend = scripted([timeoutInput(), endOfInput()])
+    let status = newStaticText(newWidgetId("idle-multi-status"), "Waiting")
+    let control = newCheckbox(newWidgetId("idle-multi-control"), "Ready")
+    let tree = newWidgetTree(newColumn(newWidgetId("idle-multi-root"),
+      [Widget(status), Widget(control)]))
+    let result = runWidgetsWithBackend(tree, backend,
+      onTimeout = proc(): RunAction =
+        status.setContent("Finished")
+        control.setChecked(true)
+        continueRunning)
+    check result.framesPresented == 2
+    check stripAnsi(backend.frames[^1].rows[0]) == "Finished".alignLeft(20)
+    check stripAnsi(backend.frames[^1].rows[1]) == "> [x] Ready".alignLeft(20)
+
+  test "timeout focus changes redraw markers and cursor without revisions":
+    let backend = scripted([timeoutInput(), timeoutInput(), endOfInput()])
+    let first = newTextField(newWidgetId("idle-focus-first"), label = "First")
+    let second = newTextField(newWidgetId("idle-focus-second"), label = "Second")
+    let tree = newWidgetTree(newColumn(newWidgetId("idle-focus-root"),
+      [Widget(first), Widget(second)]))
+    let revisions = (first.revision, second.revision)
+    var callbacks = 0
+    let result = runWidgetsWithBackend(tree, backend,
+      onTimeout = proc(): RunAction =
+        inc callbacks
+        discard tree.requestFocus(second.id)
+        continueRunning)
+    check callbacks == 2
+    check result.framesPresented == 2
+    check (first.revision, second.revision) == revisions
+    check tree.focused == some(second.id)
+    check stripAnsi(backend.frames[^1].rows[0]).startsWith("  First: ")
+    check stripAnsi(backend.frames[^1].rows[1]).startsWith("> Second: ")
+    check backend.frames[^1].cursor == some(CursorCell(column: 10, row: 1))
+
+  test "timeout visibility and enablement changes deliver focus repair events":
+    for hide in [false, true]:
+      let backend = scripted([timeoutInput(), endOfInput()])
+      let first = newCheckbox(newWidgetId("idle-repair-first"), "First")
+      let second = newCheckbox(newWidgetId("idle-repair-second"), "Second")
+      let tree = newWidgetTree(newColumn(newWidgetId("idle-repair-root"),
+        [Widget(first), Widget(second)]))
+      var callbacks = 0
+      var repaired: seq[WidgetEvent]
+      let result = runWidgetsWithBackend(tree, backend,
+        onEvents = proc(context: RuntimeEventContext): RunAction =
+          inc callbacks
+          check context.input.kind == eventTimeout
+          repaired = context.outcome.events
+          # Repair callbacks may also update the frame before presentation.
+          second.setChecked(true)
+          continueRunning,
+        onTimeout = proc(): RunAction =
+          if hide: first.setVisible(false)
+          else: first.setEnabled(false)
+          continueRunning)
+      check result.termination == endOfInput
+      check result.framesPresented == 2
+      check callbacks == 1
+      check tree.focused == some(second.id)
+      require repaired.len == 1
+      check repaired[0].kind == focusChanged
+      check repaired[0].previousFocus == some(first.id)
+      check repaired[0].newFocus == some(second.id)
+      if hide:
+        check first.allocation.isNone
+        check stripAnsi(backend.frames[^1].rows[0]) == "> [x] Second".alignLeft(20)
+      else:
+        check stripAnsi(backend.frames[^1].rows[1]) == "> [x] Second".alignLeft(20)
+
+  test "timeout changes repair focus even without an event handler":
+    let backend = scripted([timeoutInput(), endOfInput()])
+    let first = newCheckbox(newWidgetId("idle-unobserved-first"), "First")
+    let second = newCheckbox(newWidgetId("idle-unobserved-second"), "Second")
+    let tree = newWidgetTree(newColumn(newWidgetId("idle-unobserved-root"),
+      [Widget(first), Widget(second)]))
+    let result = runWidgetsWithBackend(tree, backend,
+      onTimeout = proc(): RunAction =
+        first.setVisible(false)
+        continueRunning)
+    check result.framesPresented == 2
+    check tree.focused == some(second.id)
+    check stripAnsi(backend.frames[^1].rows[0]) == "> [ ] Second".alignLeft(20)
+
+  test "timeout stop skips redraw and further reads with owned and borrowed modes":
+    for owned in [false, true]:
+      for presentation in [false, true]:
+        let backend = scripted([timeoutInput(), keyInput(keySpace)])
+        let control = newCheckbox(newWidgetId("idle-stop"), "Stop")
+        let tree = newWidgetTree(control)
+        # Positional ownership arguments retain their original meaning.
+        let result = runWidgetsWithBackend(tree, backend,
+          defaultRuntimeOptions(), nil, owned, presentation,
+          proc(): RunAction =
+            control.setChecked(true)
+            stopRunning)
+        check result.termination == requestedStop
+        check result.framesPresented == 1
+        check backend.nextEvent == 1
+        check backend.operations.count("read:50") == 1
+        check control.checked
+        check backend.operations.count("open") == int(owned)
+        check backend.operations.count("close") == int(owned)
+        check backend.operations.count("enter-screen") == int(presentation)
+        check backend.operations.count("leave-screen") == int(presentation)
+        check backend.operations.count("hide-cursor") == int(presentation)
+        check backend.operations.count("show-cursor") == int(presentation)
+        check backend.operations.count("disable-wrap") == int(presentation)
+        check backend.operations.count("enable-wrap") == int(presentation)
+        check backend.operations.count("reset") == 1
+
+  test "timeout focus repair can request stop before redraw":
+    let backend = scripted([timeoutInput(), keyInput(keySpace)])
+    let control = newCheckbox(newWidgetId("idle-repair-stop"), "Stop")
+    let tree = newWidgetTree(control)
+    let result = runWidgetsWithBackend(tree, backend,
+      onEvents = proc(context: RuntimeEventContext): RunAction =
+        check context.input.kind == eventTimeout
+        check context.outcome.events[0].kind == focusChanged
+        stopRunning,
+      onTimeout = proc(): RunAction =
+        control.setVisible(false)
+        continueRunning)
+    check result.termination == requestedStop
+    check result.framesPresented == 1
+    check backend.nextEvent == 1
+    check backend.operations[^1] == "close"
+
+  test "timeouts are not synthesized for keys resize cancellation or EOF":
+    for ending in [endOfInput(), keyInput(keyCtrlC)]:
+      let backend = scripted([keyInput(keySpace),
+        resizeInput(terminalSize(12, 1)), ending, timeoutInput()])
+      let control = newCheckbox(newWidgetId("idle-busy"), "Busy")
+      let tree = newWidgetTree(control)
+      var timeouts = 0
+      var events = 0
+      let result = runWidgetsWithBackend(tree, backend,
+        onEvents = proc(context: RuntimeEventContext): RunAction =
+          inc events
+          check context.input.kind in {eventKey, eventResize}
+          continueRunning,
+        onTimeout = proc(): RunAction =
+          inc timeouts
+          continueRunning)
+      check result.termination == (if ending.kind == eventEndOfInput:
+        RunTermination.endOfInput else: cancelled)
+      check result.framesPresented == 3
+      check backend.nextEvent == 3
+      check control.checked
+      check timeouts == 0
+      check events == 2
+
+  test "timeout exceptions preserve the primary error and attempt all cleanup":
+    for owned in [false, true]:
+      for presentation in [false, true]:
+        let backend = scripted([timeoutInput(), keyInput(keySpace)])
+        backend.failures = @[
+          "reset", "enable-wrap", "show-cursor", "leave-screen", "close"]
+        let tree = newWidgetTree(newCheckbox(newWidgetId("idle-error"), "Error"))
+        var message = ""
+        try:
+          discard runWidgetsWithBackend(tree, backend,
+            ownedSession = owned, ownPresentation = presentation,
+            onTimeout = proc(): RunAction =
+              raise newException(ValueError, "idle callback failed"))
+        except ValueError as error:
+          message = error.msg
+        check message.startsWith("idle callback failed; cleanup failures: ")
+        check "reset styles: injected reset" in message
+        check backend.nextEvent == 1
+        check backend.frames.len == 1
+        var expected = @["reset"]
+        if presentation:
+          expected.add @["enable-wrap", "show-cursor", "leave-screen"]
+          check "restore cursor: injected show-cursor" in message
+        if owned: expected.add "close"
+        check backend.operations[^expected.len .. ^1] == expected
+
+  test "timeout assertion defects also restore every acquired stage":
+    let backend = scripted([timeoutInput()])
+    let tree = newWidgetTree(newCheckbox(newWidgetId("idle-defect"), "Defect"))
+    expect AssertionDefect:
+      discard runWidgetsWithBackend(tree, backend,
+        onTimeout = proc(): RunAction =
+          doAssert false, "idle invariant failed"
+          continueRunning)
+    check backend.operations[^5 .. ^1] == @[
+      "reset", "enable-wrap", "show-cursor", "leave-screen", "close"]
 
   test "resize callbacks can hide focused controls and deliver focus repair":
     let backend = scripted([resizeInput(terminalSize(12, 2)), endOfInput()])

@@ -2,6 +2,17 @@
 
 All notable changes to TerminalWidgets are documented in this file.
 
+## v0.2.0 - 2026-10-12
+
+### Added
+
+- Optional `RuntimeTimeoutHandler` / `onTimeout` in all three runtime entry
+  points for synchronous idle updates, focus changes, and requested stops.
+  Widget changes share the existing layout/focus repair and single-frame redraw
+  path. No-op callbacks stay idle; continuous input may suppress timeouts.
+- Scripted timeout regression coverage, an `idle_updates.nim` example, and API,
+  runtime, and README documentation of timing and cleanup contracts.
+
 ## v0.1.1 - 2026-10-10
 
 ### Fixed

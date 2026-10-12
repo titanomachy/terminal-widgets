@@ -456,19 +456,32 @@ nim r --path:src examples/render_frame.nim
 ### Interactive runtime
 
 Import `terminal_widgets/runtime` explicitly to opt into terminal I/O.
-`runWidgets(tree, options, onEvents)` opens one TerminalScreen session, verifies
-interactive ANSI/raw capabilities, obtains geometry (or uses the configured
+`runWidgets(tree, options, onEvents, onTimeout)` opens one TerminalScreen session,
+verifies interactive ANSI/raw capabilities, obtains geometry (or uses the configured
 80×24 fallback), owns alternate-screen/cursor/autowrap modes, presents complete
 frames, and restores every acquired stage before closing. Ctrl+C returns
-`cancelled`, EOF returns `endOfInput`, and an event handler returning `stopRunning`
+`cancelled`, EOF returns `endOfInput`, and either handler returning `stopRunning`
 returns `requestedStop`; exceptions remain exceptions after cleanup.
 
 The handler receives each dispatched input plus its ordered `WidgetEvent`
 outcome. Unhandled keys, including Escape, are delivered there instead of being
 silently discarded. Application mutations made after dispatch cause one layout
-and redraw, including changes made in resize callbacks. Timeout polls do not
-redraw, resize forces a full layout/frame, and `pollTimeoutMs` must be in
-`1..60000`.
+and redraw, including changes made in resize callbacks. Resize forces a full
+layout/frame, and `pollTimeoutMs` must be in `1..60000`.
+
+The optional `onTimeout: RuntimeTimeoutHandler` runs once per actual input
+timeout and can update widgets, request focus, or stop. Timeouts never dispatch
+to widgets or directly call `onEvents`. Changes use the same layout/focus repair
+and at most one redraw; repair events can call `onEvents` with the original
+timeout as input. Without an idle handler, or when it makes no changes, polling
+does not redraw. Returning `stopRunning` skips any final redraw.
+
+This is an idle hook, not a periodic timer: `pollTimeoutMs` controls the input
+wait, and continuous input may prevent timeout callbacks. Keep callbacks short;
+they run synchronously on the runtime thread. Use a monotonic clock to decide
+when work is due; if updates must also happen during continuous input, call the
+same update function from `onEvents`. See the [runtime guide](docs/runtime.md)
+for the complete contract.
 
 Calling `requestFocus` in the handler updates the displayed focus marker and
 cursor before the next input, even when no widget value changes.
@@ -506,6 +519,34 @@ Compile the interactive example with:
 nim c --path:src examples/interactive_form.nim
 ```
 
+For updates while waiting for input:
+
+```nim
+import terminal_widgets
+import terminal_widgets/runtime
+
+let status = newStaticText(newWidgetId("status"), "Updates: 0")
+let tree = newWidgetTree(status)
+var updates = 0
+var options = defaultRuntimeOptions()
+options.pollTimeoutMs = 250
+
+discard runWidgets(tree, options = options,
+  onTimeout = proc(): RunAction =
+    if updates == 4:
+      return stopRunning
+    inc updates
+    status.setContent("Updates: " & $updates)
+    continueRunning)
+```
+
+The fourth update is displayed; the next timeout stops. Compile the complete
+example, which also handles Escape, with:
+
+```sh
+nim c --path:src examples/idle_updates.nim
+```
+
 ## Examples
 
 The repository includes these runnable examples:
@@ -531,13 +572,14 @@ The repository includes these runnable examples:
 | [`render_frame.nim`](examples/render_frame.nim) | Laying out a small form, rendering an exact-size plain frame, and reporting optional cursor metadata |
 | [`companion_output.nim`](examples/companion_output.nim) | Placing static graph-like string output in a frame without adding a companion dependency |
 | [`interactive_form.nim`](examples/interactive_form.nim) | Running a small validated form through the owned TerminalScreen lifecycle in a real terminal |
+| [`idle_updates.nim`](examples/idle_updates.nim) | Updating status on input timeouts, then stopping, with Escape and Ctrl+C exits |
 | [`runtime_demo.nim`](examples/runtime_demo.nim) | The finite injected runtime sequence used to regenerate the README animation deterministically |
 | [`api_overview_demo.nim`](examples/api_overview_demo.nim) | The finite `controls`, `tabs`, `text`, `events`, `layout`, and `frames` sequences used by the API overview animations |
 | [`package_import.nim`](examples/package_import.nim) | Verifying that a facade import does not initialize a terminal session |
 
-Most examples are side-effect-free. The interactive form opts into a real
-terminal session; its finite deterministic counterpart produces the checked-in
-animation above.
+Most examples are side-effect-free. The interactive forms and idle updates opt
+into a real terminal session; the finite deterministic runtime demo produces the
+checked-in animation above.
 
 ## Guides
 
@@ -586,7 +628,7 @@ Command-line `--out` and `--nimcache` overrides take precedence over
 
 ## Release information
 
-See [`RELEASE_NOTES.md`](RELEASE_NOTES.md) for the v0.1.1 runtime fixes,
+See [`RELEASE_NOTES.md`](RELEASE_NOTES.md) for the v0.2.0 idle callback,
 compatibility checks, and known limits. [`CHANGELOG.md`](CHANGELOG.md) records
 the release history. Tagged releases are available on
 [GitHub](https://github.com/titanomachy/terminal-widgets/releases).

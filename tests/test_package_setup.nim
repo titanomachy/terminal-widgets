@@ -13,7 +13,7 @@ suite "package setup":
     check true
 
   test "manifest declares package metadata and dependency floors":
-    check "version = \"0.1.1\"" in manifest
+    check "version = \"0.2.0\"" in manifest
     check "license = \"MIT\"" in manifest
     check "requires \"nim >= 2.0.0\"" in manifest
     check "requires \"terminal_style >= 0.1.1\"" in manifest

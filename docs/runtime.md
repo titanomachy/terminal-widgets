@@ -7,8 +7,9 @@ import terminal_widgets
 import terminal_widgets/runtime
 ```
 
-The facade alone is side-effect-free. `runWidgets(tree, options, onEvents)` is the
-guarded owned-session entry point demonstrated by [form.nim](../examples/form.nim).
+The facade alone is side-effect-free.
+`runWidgets(tree, options, onEvents, onTimeout)` is the guarded owned-session
+entry point demonstrated by [form.nim](../examples/form.nim).
 It requires interactive input/output, ANSI, and raw-mode support.
 
 ## Owned sessions
@@ -50,8 +51,9 @@ that stated baseline. It cannot infer or restore arbitrary pre-existing modes.
 ## Input and termination
 
 `pollTimeoutMs` defaults to 50 and must be in `1..60000`. `fallbackSize` defaults
-to 80×24 and must be positive. Timeout events do no work; resize lays out and
-presents; Ctrl+C returns `cancelled`; EOF returns `endOfInput` without retrying.
+to 80×24 and must be positive. Without `onTimeout`, timeout events do no work.
+Resize lays out and presents; Ctrl+C returns `cancelled`; EOF returns
+`endOfInput` without retrying.
 Escape and other unhandled keys reach `RuntimeEventHandler`, which may return
 `stopRunning` to produce `requestedStop`.
 
@@ -67,6 +69,65 @@ before the next input is read, even when no widget value changes. For example,
 a submission handler can focus the next field without leaving the displayed
 cursor on the previous one. Requesting the current focus does not trigger an
 extra frame.
+
+## Idle updates
+
+All three entry points accept `onTimeout: RuntimeTimeoutHandler = nil` as their
+last optional argument. `RuntimeTimeoutHandler` is a closure with signature
+`proc(): RunAction`. Existing positional and named calls retain their meaning,
+including `ownedSession` and `ownPresentation` in `runWidgetsWithBackend`.
+The owned and borrowed `runWidgets` overloads forward it to that same loop.
+
+When `readInput(options.pollTimeoutMs)` returns `eventTimeout`, the runtime calls
+`onTimeout` exactly once, synchronously on the runtime thread. The timeout never
+enters widget dispatch and does not by itself call `onEvents`. The callback may
+change widgets, change focus, or return `stopRunning`.
+
+The runtime checks widget stamps and focus using the same reconciliation as
+`onEvents`: changed state triggers layout and focus repair, then at most one
+frame before the next input. Multiple widget changes are batched into that
+frame. A no-op callback or a request for the current focus does not redraw.
+Programmatic setters do not generate user value-change events. If layout
+produces focus-repair events, `onEvents` receives those events with
+`context.input.kind == eventTimeout`; this is a repair notification rather than
+primary delivery of idle input. The repair handler may also request a stop.
+
+Returning `stopRunning` yields `requestedStop` immediately, without reading
+another input or presenting a final frame, even if the callback changed state.
+Callback exceptions propagate after all applicable cleanup steps; the primary
+exception is preserved if cleanup also fails. Owned and borrowed session and
+presentation rules remain the same.
+
+`pollTimeoutMs` is the input wait, not a guaranteed update interval. Continuous
+input may prevent timeouts entirely. There are no catch-up ticks, additional
+sleeps, worker threads, or separate redraw loops. Keep callbacks short: perform
+long work outside the event loop and safely collect completed results here.
+For time-based decisions, use a monotonic clock in an application update function.
+If updates must also run while input keeps arriving, call that function from
+`onEvents` as well. A general timer/scheduler is outside this API.
+
+```nim
+import terminal_widgets
+import terminal_widgets/runtime
+
+let status = newStaticText(newWidgetId("status"), "Updates: 0")
+let tree = newWidgetTree(status)
+var updates = 0
+var options = defaultRuntimeOptions()
+options.pollTimeoutMs = 250
+
+discard runWidgets(tree, options = options,
+  onTimeout = proc(): RunAction =
+    if updates == 4:
+      return stopRunning
+    inc updates
+    status.setContent("Updates: " & $updates)
+    continueRunning)
+```
+
+The fourth update is rendered; the next timeout stops without a final redraw.
+[idle_updates.nim](../examples/idle_updates.nim) adds Escape handling and can be
+compiled with `nim c --path:src examples/idle_updates.nim`.
 
 ## Failures and evidence
 
