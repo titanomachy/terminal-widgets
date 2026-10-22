@@ -20,34 +20,40 @@ TerminalWidgets works on Linux, macOS, and Windows.
 
 ## TerminalDeck
 
-TerminalWidgets is the retained interaction library in TerminalDeck:
-
-```text
-TerminalDeck
-├── Foundations
-│   ├── TerminalStyle
-│   └── TerminalScreen
-├── Output components
-│   ├── TerminalStatus
-│   ├── TerminalLayout
-│   ├── TerminalTable
-│   └── TerminalGraph
-└── Interaction
-    ├── TerminalPrompt
-    └── TerminalWidgets <- this package
-```
+TerminalWidgets is the retained interaction library in [TerminalDeck](https://github.com/titanomachy/terminal-deck):
 
 ```mermaid
 flowchart TB
-  ecosystem["Nim Terminal Ecosystem"]
+  terminalDeck["<b>TerminalDeck</b><br/>Nim Terminal Ecosystem"]
 
-  ecosystem --> styling["Styling & Text<br/>Formatting<br/>────────────<br/>TerminalStyle<br/>(ANSI, Colors,<br/>TrueColor)"]
-  ecosystem --> data["Tabular & Visual<br/>Data<br/>────────────<br/>TerminalTable<br/>TerminalGraph<br/>(Charts, Spark)"]
-  ecosystem --> layout["Structural &<br/>Layout<br/>────────────<br/>TerminalLayout<br/>(Trees, Panels,<br/>Callouts)"]
-  ecosystem --> status["Status &<br/>Progress<br/>────────────<br/>TerminalStatus<br/>(Spinners,<br/>Progress Bars)"]
-  ecosystem --> interaction["Interactive UI<br/>Components<br/>────────────<br/>TerminalPrompt<br/>TerminalWidgets<br/>(Prompts, Tabs, etc.)"]
+  terminalDeck --> foundations["Foundations"]
+  terminalDeck --> outputComponents["Output components"]
+  terminalDeck --> interaction["Interaction<br/>Interactive UI components"]
 
-  layout --> terminalScreen["TerminalScreen<br/>Alternate Screen · Raw Mode · Cursor<br/>Control · Terminal Geometry"]
+  foundations --> terminalStyle["<b>TerminalStyle</b><br/>Styling & Text Formatting<br/>ANSI · Colors · TrueColor"]
+  foundations --> terminalScreen["<b>TerminalScreen</b><br/>Alternate Screen · Raw Mode<br/>Cursor Control · Terminal Geometry"]
+
+  outputComponents --> terminalStatus["<b>TerminalStatus</b><br/>Status & Progress<br/>Spinners · Progress Bars"]
+  outputComponents --> terminalLayout["<b>TerminalLayout</b><br/>Structure & Layout<br/>Trees · Panels · Callouts"]
+  outputComponents --> terminalTable["<b>TerminalTable</b><br/>Tabular Data"]
+  outputComponents --> terminalGraph["<b>TerminalGraph</b><br/>Visual Data<br/>Charts · Sparklines"]
+
+  interaction --> terminalPrompt["<b>TerminalPrompt</b><br/>Prompts"]
+  interaction --> terminalWidgets["<b>TerminalWidgets</b><br/>Tabs & Interactive Widgets<br/>"]
+
+  terminalLayout -.-> terminalScreen
+
+  classDef deckColor fill:#fff1c2,stroke:#e8cd78,color:#6b5416;
+  classDef foundationColor fill:#dbeafe,stroke:#2563eb,color:#1e3a8a;
+  classDef outputColor fill:#dcfce7,stroke:#16a34a,color:#14532d;
+  classDef interactionColor fill:#f3e8ff,stroke:#9333ea,color:#581c87;
+  classDef currentPackage stroke:#9333ea,stroke-width:4px;
+
+  class terminalDeck deckColor;
+  class foundations,terminalStyle,terminalScreen foundationColor;
+  class outputComponents,terminalStatus,terminalLayout,terminalTable,terminalGraph outputColor;
+  class interaction,terminalPrompt,terminalWidgets interactionColor;
+  class terminalWidgets currentPackage;
 ```
 
 ## Contents
