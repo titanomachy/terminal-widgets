@@ -44,10 +44,10 @@ flowchart TB
   terminalLayout -.-> terminalScreen
 
   classDef deckColor fill:#fff1c2,stroke:#e8cd78,color:#6b5416;
-  classDef foundationColor fill:#dbeafe,stroke:#2563eb,color:#1e3a8a;
+  classDef foundationColor fill:#dbeafe,stroke:#1d4ed8,color:#172554;
   classDef outputColor fill:#dcfce7,stroke:#16a34a,color:#14532d;
-  classDef interactionColor fill:#f3e8ff,stroke:#9333ea,color:#581c87;
-  classDef currentPackage stroke:#9333ea,stroke-width:4px;
+  classDef interactionColor fill:#fff5f5,stroke:#b91c1c,color:#7f1d1d;
+  classDef currentPackage stroke:#b91c1c,stroke-width:4px;
 
   class terminalDeck deckColor;
   class foundations,terminalStyle,terminalScreen foundationColor;
