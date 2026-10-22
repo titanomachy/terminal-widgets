@@ -22,39 +22,7 @@ TerminalWidgets works on Linux, macOS, and Windows.
 
 TerminalWidgets is the retained interaction library in [TerminalDeck](https://github.com/titanomachy/terminal-deck):
 
-```mermaid
-flowchart TB
-  terminalDeck["<b>TerminalDeck</b><br/>Nim Terminal Ecosystem"]
-
-  terminalDeck --> foundations["Foundations"]
-  terminalDeck --> outputComponents["Output components"]
-  terminalDeck --> interaction["Interaction<br/>Interactive UI components"]
-
-  foundations --> terminalStyle["<b>TerminalStyle</b><br/>Styling & Text Formatting<br/>ANSI · Colors · TrueColor"]
-  foundations --> terminalScreen["<b>TerminalScreen</b><br/>Alternate Screen · Raw Mode<br/>Cursor Control · Terminal Geometry"]
-
-  outputComponents --> terminalStatus["<b>TerminalStatus</b><br/>Status & Progress<br/>Spinners · Progress Bars"]
-  outputComponents --> terminalLayout["<b>TerminalLayout</b><br/>Structure & Layout<br/>Trees · Panels · Callouts"]
-  outputComponents --> terminalTable["<b>TerminalTable</b><br/>Tabular Data"]
-  outputComponents --> terminalGraph["<b>TerminalGraph</b><br/>Visual Data<br/>Charts · Sparklines"]
-
-  interaction --> terminalPrompt["<b>TerminalPrompt</b><br/>Prompts"]
-  interaction --> terminalWidgets["<b>TerminalWidgets</b><br/>Tabs & Interactive Widgets<br/>"]
-
-  terminalLayout -.-> terminalScreen
-
-  classDef deckColor fill:#fff1c2,stroke:#e8cd78,color:#6b5416;
-  classDef foundationColor fill:#dbeafe,stroke:#1d4ed8,color:#172554;
-  classDef outputColor fill:#dcfce7,stroke:#16a34a,color:#14532d;
-  classDef interactionColor fill:#fff5f5,stroke:#b91c1c,color:#7f1d1d;
-  classDef currentPackage stroke:#b91c1c,stroke-width:4px;
-
-  class terminalDeck deckColor;
-  class foundations,terminalStyle,terminalScreen foundationColor;
-  class outputComponents,terminalStatus,terminalLayout,terminalTable,terminalGraph outputColor;
-  class interaction,terminalPrompt,terminalWidgets interactionColor;
-  class terminalWidgets currentPackage;
-```
+![TerminalDeck ecosystem: Foundations, Output components, and Interaction, with TerminalWidgets highlighted.](docs/diagrams/terminal-deck.svg)
 
 ## Contents
 
