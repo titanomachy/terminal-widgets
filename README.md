@@ -22,7 +22,7 @@ TerminalWidgets works on Linux, macOS, and Windows.
 
 TerminalWidgets is the retained interaction library in [TerminalDeck](https://github.com/titanomachy/terminal-deck):
 
-![TerminalDeck ecosystem: Foundations, Output components, and Interaction, with TerminalWidgets highlighted.](docs/diagrams/terminal-deck.svg)
+![TerminalDeck ecosystem: Foundations, Output components, and Interaction.](docs/diagrams/terminal-deck.svg)
 
 ## Contents
 

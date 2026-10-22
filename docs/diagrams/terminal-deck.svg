@@ -1,13 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1080" height="548" viewBox="0 0 1080 548" role="img" aria-labelledby="title description">
   <title id="title">TerminalDeck ecosystem</title>
-  <desc id="description">TerminalDeck groups its libraries into Foundations, Output components, and Interaction. Foundations contains TerminalStyle and TerminalScreen. Output components contains TerminalStatus, TerminalTable, TerminalLayout, and TerminalGraph. Interaction contains TerminalPrompt and TerminalWidgets, the current package. TerminalLayout uses TerminalScreen.</desc>
+  <desc id="description">TerminalDeck groups its libraries into Foundations, Output components, and Interaction. Foundations contains TerminalStyle and TerminalScreen. Output components contains TerminalStatus, TerminalTable, TerminalLayout, and TerminalGraph. Interaction contains TerminalPrompt and TerminalWidgets. TerminalLayout uses TerminalScreen.</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M1 1 7 4 1 7" fill="none" stroke="#94a3b8" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
     </marker>
     <style>
       text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; }
-      .deck { fill: #fff1c2; stroke: #e8cd78; }
+      .deck { fill: #fff1c2; stroke: #e8cd78; stroke-width: 3; }
       .deck-ink { fill: #6b5416; }
       .connector { fill: none; stroke: #94a3b8; stroke-width: 1.5; }
       .card { fill: #fff; stroke-width: 1; }
@@ -24,12 +24,10 @@
       .interaction-panel { fill: #fff5f5; stroke: #fecaca; }
       .interaction-card { stroke: #fecaca; }
       .interaction-ink { fill: #7f1d1d; }
-      .current-card { fill: #fff; stroke: #c94b4b; stroke-width: 2; }
-      .current-label { fill: #a12626; font-size: 9px; font-weight: 700; letter-spacing: 1px; }
       @media (prefers-color-scheme: dark) {
         .deck { fill: #302817; stroke: #766033; }
         .deck-ink { fill: #ffe5a1; }
-        .card, .current-card { fill: #161b22; }
+        .card { fill: #161b22; }
         .detail { fill: #c1cbd7; }
         .note { fill: #a2afbf; }
         .foundation-panel { fill: #111e30; stroke: #34537c; }
@@ -41,8 +39,6 @@
         .interaction-panel { fill: #2a191c; stroke: #704044; }
         .interaction-card { stroke: #704044; }
         .interaction-ink { fill: #fecaca; }
-        .current-card { stroke: #e58989; }
-        .current-label { fill: #f0a5a5; }
       }
     </style>
   </defs>
@@ -105,10 +101,9 @@
   <text class="name interaction-ink" x="814" y="273">TerminalPrompt</text>
   <text class="detail" x="814" y="295">Prompts</text>
 
-  <rect class="current-card" x="798" y="350" width="244" height="88" rx="10"/>
+  <rect class="card interaction-card" x="798" y="350" width="244" height="88" rx="10"/>
   <text class="name interaction-ink" x="814" y="377">TerminalWidgets</text>
   <text class="detail" x="814" y="399">Tabs &amp; interactive widgets</text>
-  <text class="current-label" x="814" y="418">CURRENT PACKAGE</text>
 
   <!-- Keep the cross-library dependency outside the cards. -->
   <path class="connector" d="M436 438 V478 Q436 494 420 494 H176 Q160 494 160 478 V440" stroke-dasharray="4 5" marker-end="url(#arrow)"/>
