@@ -42,6 +42,7 @@ suite "release readiness metadata":
     check "--panics:on" in releaseNotes
     check "RELEASE_NOTES.md" in readme
     check "THIRD_PARTY_NOTICES.md" in readme
-    check "```mermaid" in readme
-    check "Nim Terminal Ecosystem" in readme
+    check "https://github.com/titanomachy/terminal-deck" in readme
+    check "docs/diagrams/terminal-deck.svg" in readme
+    check fileExists(repositoryRoot / "docs" / "diagrams" / "terminal-deck.svg")
     check "### Release preparation" in changelog
