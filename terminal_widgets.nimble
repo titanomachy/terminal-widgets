@@ -74,11 +74,18 @@ task headlessExample, "Run the deterministic mixed-form example":
 task benchmark, "Run the fixed large-list release benchmark":
   exec "nim c -r -d:release --path:src tests/benchmark_large_list.nim"
 
-task docs, "Generate API documentation inside build/docs":
+task docs, "Generate the documentation homepage and API reference in build/docs":
   requireSource("src/terminal_widgets.nim")
+  rmDir("build/docs")
+  let docRoot = " --docRoot:" & quoteShell(getCurrentDir() / "src")
   # Isolate documentation helper compilation from repository parent configs.
-  exec "nim doc --skipParentCfg:on --skipProjCfg:on --project --index:on --outdir:build/docs --nimcache:build/nimcache/docs --path:src src/terminal_widgets.nim"
-  exec "nim doc --skipParentCfg:on --skipProjCfg:on --project --index:on --outdir:build/docs --nimcache:build/nimcache/docs-runtime --path:src src/terminal_widgets/runtime.nim"
+  exec "nim doc --skipParentCfg:on --skipProjCfg:on --project --index:on" & docRoot & " --outdir:build/docs --nimcache:build/nimcache/docs --path:src src/terminal_widgets.nim"
+  exec "nim doc --skipParentCfg:on --skipProjCfg:on --project --index:on" & docRoot & " --outdir:build/docs --nimcache:build/nimcache/docs-runtime --path:src src/terminal_widgets/runtime.nim"
+  # Rebuild the combined symbol index after documenting both entry points.
+  exec "nim buildIndex --skipParentCfg:on --skipProjCfg:on --out:build/docs/theindex.html build/docs"
+  exec "nim md2html --skipParentCfg:on --skipProjCfg:on --out:build/docs/index.html docs/api-index.md"
+  mkDir("build/docs/images")
+  cpFile("docs/images/interactive-form.gif", "build/docs/images/interactive-form.gif")
 
 task releaseCheck, "Validate the implemented package, tests, examples, and docs":
   runReleaseStep("nimble check")

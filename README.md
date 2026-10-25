@@ -8,6 +8,9 @@ importing `terminal_widgets` performs no terminal I/O.
 The public model, layout, keyboard dispatch, single-line text editing, pure
 full-frame rendering, and opt-in guarded runtime are available now.
 
+[Documentation](https://titanomachy.github.io/terminal-widgets/) includes the
+quick start, API reference, symbol index, guides, and runnable examples.
+
 ## Platform support
 
 TerminalWidgets works on Linux, macOS, and Windows.
@@ -568,8 +571,15 @@ checked-in animation above.
 
 Repository builds are contained in `build/`: executables go to `build/bin`,
 compiler caches use a Nim-version and project-specific directory below
-`build/nimcache`, generated API documentation goes to `build/docs`, and test
+`build/nimcache`, the generated documentation site goes to `build/docs`, and test
 fixtures belong in `build/tmp`.
+
+`nimble docs` rebuilds the homepage, model and runtime API references, combined
+symbol index, and demo image. Preview the site with
+`python3 -m http.server 8000 --directory build/docs` and open
+`http://localhost:8000`. The Documentation workflow publishes this directory to
+[GitHub Pages](https://titanomachy.github.io/terminal-widgets/) on pushes to
+`master` and can also be run manually.
 
 Run the focused public-model suite with:
 
